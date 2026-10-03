@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 640" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Jugador sin foto">
+  <defs>
+    <radialGradient id="pitchBg" cx="50%" cy="45%" r="70%">
+      <stop offset="0%" stop-color="#0d1f14" />
+      <stop offset="70%" stop-color="#050d09" />
+      <stop offset="100%" stop-color="#000" />
+    </radialGradient>
+    <linearGradient id="silhouette" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f2b1a" />
+      <stop offset="100%" stop-color="#050d09" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- fondo verde oscuro tipo pitch -->
+  <rect width="360" height="640" fill="url(#pitchBg)" />
+
+  <!-- silueta busto/torso genérica, centrada -->
+  <g fill="url(#silhouette)" stroke="rgba(190,242,100,0.15)" stroke-width="1.5">
+    <!-- cabeza -->
+    <ellipse cx="180" cy="210" rx="58" ry="70" />
+    <!-- cuello + hombros + torso hasta gorro-corte -->
+    <path d="
+      M 180 275
+      C 175 285, 172 295, 172 305
+      L 172 320
+      C 130 328, 90 350, 68 400
+      L 68 640
+      L 292 640
+      L 292 400
+      C 270 350, 230 328, 188 320
+      L 188 305
+      C 188 295, 185 285, 180 275
+      Z
+    " />
+  </g>
+
+  <!-- signo de pregunta grande en el centro del pecho, verde lima -->
+  <g filter="url(#glow)">
+    <text
+      x="180"
+      y="490"
+      text-anchor="middle"
+      font-family="'Permanent Marker', 'Bebas Neue', sans-serif"
+      font-size="220"
+      font-weight="900"
+      fill="#bef264"
+      opacity="0.9"
+    >?</text>
+  </g>
+
+  <!-- copy tenue debajo -->
+  <text
+    x="180"
+    y="595"
+    text-anchor="middle"
+    font-family="'Bebas Neue', system-ui, sans-serif"
+    font-size="16"
+    letter-spacing="4"
+    fill="rgba(190,242,100,0.55)"
+  >SIN FOTO DE JUGADOR</text>
+</svg>
