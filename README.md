@@ -1,7 +1,7 @@
 # FC — Frontend
 
 PWA en Vite + React 19 + TypeScript + Tailwind v4 + shadcn/ui.
-Cliente del backend `simonfc-api` para inscripción a partidos de fútbol.
+Cliente del backend `fc-api` para inscripción a partidos de fútbol.
 
 ## Stack
 
