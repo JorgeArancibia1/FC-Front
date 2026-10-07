@@ -79,8 +79,8 @@ export function useUpdateMatch(id: string) {
       return data
     },
     onSuccess: () => {
+      // QK.all es prefijo de QK.detail(id): una sola invalidación alcanza.
       qc.invalidateQueries({ queryKey: QK.all })
-      qc.invalidateQueries({ queryKey: QK.detail(id) })
     },
   })
 }

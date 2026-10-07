@@ -74,20 +74,18 @@ export function useMatchRealtime(matchId: string | undefined): RealtimeStatus {
     }
     function handleRegistered(evt: PlayerRegisteredEvent) {
       if (evt.matchId !== matchId) return
-      qc.invalidateQueries({ queryKey: ['matches', matchId] })
+      // Una sola invalidación con prefijo ['matches'] cubre lista, active y
+      // detalle: las 3 llamadas separadas re-disparaban el refetch de las
+      // mismas queries y multiplicaban los requests contra el rate limit.
       qc.invalidateQueries({ queryKey: ['matches'] })
-      qc.invalidateQueries({ queryKey: ['matches', 'active'] })
     }
     function handleUnregistered(evt: PlayerUnregisteredEvent) {
       if (evt.matchId !== matchId) return
-      qc.invalidateQueries({ queryKey: ['matches', matchId] })
       qc.invalidateQueries({ queryKey: ['matches'] })
-      qc.invalidateQueries({ queryKey: ['matches', 'active'] })
     }
     function handleReordered(evt: { matchId: string }) {
       if (evt.matchId !== matchId) return
-      qc.invalidateQueries({ queryKey: ['matches', matchId] })
-      qc.invalidateQueries({ queryKey: ['matches', 'active'] })
+      qc.invalidateQueries({ queryKey: ['matches'] })
     }
 
     socket.on('connect', handleConnect)
