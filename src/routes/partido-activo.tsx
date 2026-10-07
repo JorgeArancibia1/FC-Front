@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { LogOut, MapPin, Clock, Users, Loader2, Wifi, WifiOff, Calendar, UserCircle2, LayoutDashboard } from 'lucide-react'
+import { LogOut, MapPin, Clock, Users, Loader2, Wifi, WifiOff, TriangleAlert, Calendar, UserCircle2, LayoutDashboard } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,7 +50,8 @@ export default function PartidoActivo() {
   return (
     <div className="dark min-h-svh bg-pitch-vignette text-foreground">
       <header className="border-b border-emerald-500/15 bg-black/40 backdrop-blur-md sticky top-0 z-20 pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto max-w-3xl px-4 py-4 flex items-center justify-between">
+        {/* flex-wrap: a 320-360px el avatar + 4 botones no entran en una sola fila */}
+        <div className="mx-auto max-w-3xl px-4 py-4 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <UserAvatar
               photoUrl={profile?.photoUrl}
@@ -79,7 +80,7 @@ export default function PartidoActivo() {
                 size="sm"
                 className="text-emerald-100 hover:bg-emerald-500/10 hover:text-white"
               >
-                <Link to="/admin" title="Volver al panel admin">
+                <Link to="/admin" title="Volver al panel admin" aria-label="Volver al panel admin">
                   <LayoutDashboard /> <span className="hidden sm:inline">Panel</span>
                 </Link>
               </Button>
@@ -90,7 +91,7 @@ export default function PartidoActivo() {
               size="sm"
               className="text-emerald-100 hover:bg-emerald-500/10 hover:text-white"
             >
-              <Link to="/perfil">
+              <Link to="/perfil" aria-label="Mi perfil">
                 <UserCircle2 /> <span className="hidden sm:inline">Perfil</span>
               </Link>
             </Button>
@@ -98,6 +99,7 @@ export default function PartidoActivo() {
               variant="ghost"
               size="sm"
               onClick={handleLogout}
+              aria-label="Cerrar sesión"
               className="text-emerald-100 hover:bg-emerald-500/10 hover:text-white"
             >
               <LogOut /> <span className="hidden sm:inline">Salir</span>
@@ -197,14 +199,20 @@ function RealtimeIndicator({
     },
     connected: { Icon: Wifi, label: '', className: 'text-primary' },
     disconnected: { Icon: WifiOff, label: 'Desconectado', className: 'text-destructive' },
+    error: { Icon: TriangleAlert, label: 'Error de conexión', className: 'text-destructive' },
   }[status]
+  // En móvil (mobile-first) el header va apretado: sólo icono; el estado va en
+  // title/aria-label. El texto se muestra a partir de sm si hay lugar.
+  const text = config.label || 'Conectado'
   return (
     <span
-      className="hidden sm:inline-flex items-center gap-1.5 text-xs text-emerald-200/70"
-      title={`Realtime: ${config.label}`}
+      className="inline-flex items-center gap-1.5 text-xs text-emerald-200/70"
+      role="status"
+      title={`Realtime: ${text}`}
+      aria-label={`Realtime: ${text}`}
     >
-      <config.Icon className={cn('size-3.5', config.className)} />
-      {config.label}
+      <config.Icon aria-hidden className={cn('size-3.5', config.className)} />
+      <span className="hidden sm:inline">{config.label}</span>
     </span>
   )
 }

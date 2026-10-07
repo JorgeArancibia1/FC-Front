@@ -1,0 +1,42 @@
+[build]
+  command = "pnpm build"
+  publish = "dist"
+
+# SPA fallback: todas las rutas profundas (ej. /admin/partidos/123) deben
+# servir index.html, tanto con el service worker como sin él (deep links,
+# refresco de página, primera visita).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # La app es una SPA sin inline scripts peligrosos; connect-src cubre
+    # la API y los websockets en dev/prod. OJO: si el backend (simonfc-api)
+    # se despliega en otro host (Railway/Render), agregar ESE dominio acá
+    # o el socket.io será bloqueado por la CSP.
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' ws: wss: http://localhost:3000 https://fonts.googleapis.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+
+# Los assets con hash (js/css) son inmutables → caché larga.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# El index.html y el manifest nunca deben quedar cacheados viejos.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"

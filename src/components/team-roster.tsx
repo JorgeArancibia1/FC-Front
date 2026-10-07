@@ -76,6 +76,10 @@ export function TeamRoster({ team, players, capacity, currentUserId }: Props) {
                 <img
                   src={resolveAssetUrl(r.user.photoUrl)}
                   alt={r.user.name}
+                  loading="lazy"
+                  decoding="async"
+                  width={44}
+                  height={44}
                   className="size-11 rounded-full object-cover shrink-0"
                 />
               ) : (

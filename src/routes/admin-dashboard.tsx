@@ -1,17 +1,22 @@
 import { Link } from 'react-router-dom'
-import { Calendar, Users, ArrowRight, Plus, PlaySquare } from 'lucide-react'
+import { AlertCircle, Calendar, Users, ArrowRight, Plus, PlaySquare, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMatches } from '@/lib/api-matches'
 import { useUsers } from '@/lib/api-users'
+import { getApiErrorMessage } from '@/lib/errors'
 
 export default function AdminDashboard() {
   const matches = useMatches()
   const users = useUsers()
-  const openMatches = matches.data?.filter((m) => m.status === 'open').length ?? 0
-  const totalMatches = matches.data?.length ?? 0
-  const activeUsers = users.data?.filter((u) => u.status !== 'eliminado').length ?? 0
-  const deletedUsers = (users.data?.length ?? 0) - activeUsers
+
+  const openMatches = matches.data?.filter((m) => m.status === 'open').length
+  const totalMatches = matches.data?.length
+  const activeUsers = users.data?.filter((u) => u.status !== 'eliminado').length
+  const deletedUsers =
+    users.data && activeUsers !== undefined ? users.data.length - activeUsers : undefined
+
+  const anyLoading = matches.isPending || users.isPending
 
   return (
     <div className="space-y-6">
@@ -35,26 +40,90 @@ export default function AdminDashboard() {
         </CardHeader>
       </Card>
 
+      {anyLoading && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {matches.isError && (
+        <Card className="border-destructive/40">
+          <CardContent className="py-6 flex items-center gap-3 text-sm">
+            <AlertCircle className="size-5 text-destructive shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium">No se pudieron cargar los partidos.</p>
+              <p className="text-muted-foreground">{getApiErrorMessage(matches.error)}</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => matches.refetch()}>
+              Reintentar
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {users.isError && (
+        <Card className="border-destructive/40">
+          <CardContent className="py-6 flex items-center gap-3 text-sm">
+            <AlertCircle className="size-5 text-destructive shrink-0" />
+            <div className="flex-1">
+              <p className="font-medium">No se pudieron cargar los usuarios.</p>
+              <p className="text-muted-foreground">{getApiErrorMessage(users.error)}</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => users.refetch()}>
+              Reintentar
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Partidos totales</CardDescription>
-            <CardTitle className="text-3xl">{totalMatches}</CardTitle>
+            {/* '…' mientras carga y '—' si falló: nunca un 0 prematuro. */}
+            <CardTitle className="text-3xl">
+              {matches.isPending ? '…' : matches.isError ? '—' : totalMatches ?? '…'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            {openMatches} abiertos a inscripción
+            {matches.isPending
+              ? '…'
+              : matches.isError
+                ? '—'
+                : `${openMatches ?? 0} abiertos a inscripción`}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Usuarios registrados</CardDescription>
-            <CardTitle className="text-3xl">{users.isPending ? '…' : activeUsers}</CardTitle>
+            <CardTitle className="text-3xl">
+              {users.isPending ? '…' : users.isError ? '—' : activeUsers ?? '…'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            {deletedUsers > 0 ? `${deletedUsers} eliminado${deletedUsers === 1 ? '' : 's'}` : 'Todos activos'}
+            {users.isPending
+              ? '…'
+              : users.isError
+                ? '—'
+                : deletedUsers != null && deletedUsers > 0
+                  ? `${deletedUsers} eliminado${deletedUsers === 1 ? '' : 's'}`
+                  : 'Todos activos'}
           </CardContent>
         </Card>
       </div>
+
+      {matches.isSuccess && matches.data.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <p className="text-muted-foreground">Aún no hay partidos.</p>
+            <Button asChild>
+              <Link to="/admin/partidos/nuevo">
+                <Plus /> Crear el primero
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="hover:border-primary/50 transition-colors">

@@ -1,7 +1,7 @@
 # FC — Frontend
 
 PWA en Vite + React 19 + TypeScript + Tailwind v4 + shadcn/ui.
-Cliente del backend `fc-api` para inscripción a partidos de fútbol.
+Cliente del backend `simonfc-api` (carpeta `FC-API`) para inscripción a partidos de fútbol.
 
 ## Stack
 
@@ -29,29 +29,49 @@ pnpm dev                   # http://localhost:5173
 | `pnpm build`   | Type-check + build de producción a `dist/`     |
 | `pnpm preview` | Sirve `dist/` localmente para probar el build  |
 | `pnpm lint`    | ESLint                                         |
+| `pnpm icons`   | Regenera los iconos PNG del PWA en `public/`   |
 
 ## Estructura
 
 ```
 src/
 ├── components/
-│   ├── auth/          # RequireAuth, RedirectByRole
-│   └── ui/            # Componentes shadcn (Button, Input, Card, Label)
+│   ├── admin/
+│   │   └── admin-shell.tsx     # Layout del panel admin (header + nav + Outlet)
+│   ├── auth/                   # RequireAuth, RedirectByRole
+│   ├── ui/                     # Componentes shadcn (Button, Input, Card, Label)
+│   ├── match-hero-board.tsx    # Tablero de equipos con DnD (GSAP + Atlaskit)
+│   ├── player-card-hero.tsx    # Tarjeta de jugador (reveal + drag & drop)
+│   ├── match-enroll-button.tsx # Botón de inscripción al partido
+│   ├── match-status-badge.tsx  # Badge de estado del partido
+│   └── install-button.tsx      # Instalación de la PWA (Android/iOS)
 ├── hooks/
-│   └── use-auth.ts    # useLogin, useLogout, useCurrentUser
+│   ├── use-auth.ts             # useLogin, useLogout, useCurrentUser
+│   ├── use-match-realtime.ts   # socket.io: room del partido + token dinámico
+│   ├── use-install-prompt.ts   # beforeinstallprompt / flujo iOS
+│   └── use-theme-color.ts      # <meta name="theme-color"> por ruta
 ├── lib/
-│   ├── api.ts         # axios + interceptor refresh
-│   ├── auth-store.ts  # tokens en localStorage + pub/sub
-│   └── utils.ts       # cn() de shadcn
+│   ├── api.ts                  # axios + interceptor de refresh JWT
+│   ├── api-matches.ts          # queries/mutations de partidos (TanStack Query)
+│   ├── api-users.ts            # usuarios (admin)
+│   ├── api-profile.ts          # perfil del usuario
+│   ├── auth-store.ts           # tokens en localStorage + pub/sub (subscribe)
+│   ├── teams.ts                # buildTeams: armado de equipos y slots
+│   └── utils.ts                # cn() de shadcn
 ├── routes/
 │   ├── login.tsx
+│   ├── perfil.tsx
+│   ├── partido-activo.tsx      # Vista del próximo partido (mobile-first)
 │   ├── admin-dashboard.tsx
-│   └── partido-activo.tsx
+│   ├── admin-matches-list.tsx  # /admin/partidos
+│   ├── admin-match-new.tsx     # /admin/partidos/nuevo
+│   ├── admin-match-detail.tsx  # /admin/partidos/:id
+│   └── admin-users-list.tsx    # /admin/usuarios
 ├── types/
-│   └── auth.ts
-├── App.tsx            # router
-├── main.tsx           # providers (QueryClient)
-└── index.css          # Tailwind + design tokens
+│   └── auth.ts, match.ts, profile.ts, admin-user.ts
+├── App.tsx                     # router
+├── main.tsx                    # providers (QueryClient)
+└── index.css                   # Tailwind + design tokens
 ```
 
 ## Auth flow
@@ -68,16 +88,21 @@ src/
 Configurada en `vite.config.ts` con `vite-plugin-pwa` (`registerType: 'autoUpdate'`).
 El build genera `sw.js`, `manifest.webmanifest` y precachea los assets con hash.
 
-**Pendiente**: subir los iconos PNG reales al directorio `public/`:
-`pwa-192x192.png`, `pwa-512x512.png`, `pwa-512x512-maskable.png`, `apple-touch-icon.png`.
-Mientras tanto, el favicon SVG funciona pero los browsers usarán fallback al instalar.
+Los iconos ya están en `public/`: `icon-192.png`, `icon-512.png`,
+`icon-192-maskable.png`, `icon-512-maskable.png`, `apple-touch-icon.png` y
+`favicon.ico` (los mismos que declara el manifest en `vite.config.ts`).
+Si cambia el logo, dejá la fuente en `public/` y regenerarlos con `pnpm icons`.
 
 ## Deploy a Netlify
 
-El proyecto incluye `netlify.toml` con todo configurado (SPA redirect, cache headers para SW/assets, headers de seguridad).
+El repo incluye `netlify.toml` con la config real del deploy:
+redirect SPA (`/*` → `/index.html`, para que los deep links no den 404),
+headers de seguridad (CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`,
+`Permissions-Policy`) y cache headers (assets con hash immutable,
+`index.html`/`manifest` sin cache).
 
 ### Antes de desplegar
-1. Tu **backend** (`simonfc-api`) debe estar publicado en algún lado (Railway, Render, Fly.io, etc.).
+1. Tu **backend** (`FC-API`, paquete `simonfc-api`) debe estar publicado en algún lado (Railway, Render, Fly.io, etc.).
 2. Necesitas saber su URL pública — la usarás como `VITE_API_URL`.
 3. Agregar el dominio Netlify (`https://<tu-sitio>.netlify.app`) a la variable `CORS_ALLOWED_ORIGINS` del backend.
 
@@ -103,7 +128,7 @@ Después de subir:
 ```bash
 npm i -g netlify-cli
 netlify login
-cd /Users/koke/Documents/Arbol-de-vida/arbol-de-vida-fc
+cd arbol-de-vida-fc
 netlify init                              # crea el sitio (o lo conecta a uno existente)
 netlify env:set VITE_API_URL https://tu-backend.com/api
 netlify deploy --build --prod             # build + deploy a producción

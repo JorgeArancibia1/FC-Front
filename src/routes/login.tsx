@@ -1,17 +1,25 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { Info, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Info, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCurrentUser, useLogin } from '@/hooks/use-auth'
 import { InstallButton } from '@/components/install-button'
+import { getApiErrorMessage } from '@/lib/errors'
 import type { CurrentUser } from '@/types/auth'
 
 function destinationFor(user: CurrentUser): string {
   if (user.roles.includes('admin') || user.roles.includes('supervisor')) return '/admin'
   return '/partido-activo'
+}
+
+// El `?reason=` viene de un link: limitamos el largo para que nadie pinte
+// texto arbitrario largo en el banner.
+function truncateReason(reason: string): string {
+  return reason.length > 140 ? `${reason.slice(0, 140)}…` : reason
 }
 
 export default function LoginPage() {
@@ -24,6 +32,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   if (currentUser) {
     const from = (location.state as { from?: string } | null)?.from
@@ -32,14 +41,16 @@ export default function LoginPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const result = await login.mutateAsync({ email, password })
-    navigate(destinationFor(result.user), { replace: true })
+    try {
+      const result = await login.mutateAsync({ email, password })
+      toast.success('Sesión iniciada')
+      navigate(destinationFor(result.user), { replace: true })
+    } catch (err) {
+      toast.error(getApiErrorMessage(err))
+    }
   }
 
-  const errorMessage = (() => {
-    const err = login.error as { response?: { data?: { message?: string | string[] } } } | null
-    return err?.response?.data?.message ?? null
-  })()
+  const errorMessage = login.error ? getApiErrorMessage(login.error) : null
 
   return (
     <div className="min-h-svh flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4 py-10">
@@ -61,12 +72,9 @@ export default function LoginPage() {
         {sessionEndedReason && (
           <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 flex items-start gap-2 text-sm">
             <Info className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-amber-900 dark:text-amber-200">Tu sesión se cerró</p>
-              <p className="text-amber-800/80 dark:text-amber-200/80 text-xs mt-0.5">
-                {sessionEndedReason}
-              </p>
-            </div>
+            <p className="font-medium text-amber-900 dark:text-amber-200">
+              Tu sesión se cerró. Motivo: {truncateReason(sessionEndedReason)}
+            </p>
           </div>
         )}
 
@@ -92,24 +100,32 @@ export default function LoginPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  minLength={8}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={login.isPending}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    minLength={8}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={login.isPending}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    aria-pressed={showPassword}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </div>
 
-              {errorMessage && (
-                <p className="text-sm text-destructive">
-                  {Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage}
-                </p>
-              )}
+              {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
 
               <Button type="submit" className="w-full" disabled={login.isPending} size="lg">
                 {login.isPending ? (

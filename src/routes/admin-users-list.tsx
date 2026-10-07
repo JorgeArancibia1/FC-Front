@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
-import { AlertCircle, Loader2, Pencil, Trash2, X, ShieldCheck, ShieldHalf, User2, UserPlus } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent, type InputHTMLAttributes } from 'react'
+import { AlertCircle, Eye, EyeOff, Loader2, Pencil, Trash2, X, ShieldCheck, ShieldHalf, User2, UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -7,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { UserAvatar } from '@/components/user-avatar'
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from '@/lib/api-users'
 import { useCurrentUser } from '@/hooks/use-auth'
+import { getApiErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 import type { AdminUser, CreateUserInput, UpdateUserInput } from '@/types/admin-user'
 import type { UserRole } from '@/types/auth'
@@ -17,15 +19,29 @@ const ROLE_OPTIONS: { value: UserRole; label: string; icon: typeof ShieldCheck }
   { value: 'usuario', label: 'Usuario', icon: User2 },
 ]
 
+// Normaliza texto para comparar sin distinguir mayúsculas ni acentos.
+function normalizeText(value: string): string {
+  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+}
+
 export default function AdminUsersList() {
   const { data, isPending, isError, error, refetch } = useUsers()
   const [editing, setEditing] = useState<AdminUser | null>(null)
   const [deleting, setDeleting] = useState<AdminUser | null>(null)
   const [creating, setCreating] = useState(false)
+  const [search, setSearch] = useState('')
   const currentUser = useCurrentUser()
 
   const activeUsers = data?.filter((u) => u.status !== 'eliminado') ?? []
   const deletedCount = (data?.length ?? 0) - activeUsers.length
+
+  // Filtro en cliente: nombre, apellido o email sin distinguir mayúsculas ni acentos.
+  const query = normalizeText(search.trim())
+  const visibleUsers = query
+    ? (data ?? []).filter((u) =>
+        [u.name, u.lastName ?? '', u.email].some((field) => normalizeText(field).includes(query)),
+      )
+    : data ?? []
 
   return (
     <div className="space-y-4">
@@ -41,6 +57,14 @@ export default function AdminUsersList() {
           <UserPlus /> Nuevo
         </Button>
       </div>
+
+      <Input
+        type="search"
+        aria-label="Buscar usuarios"
+        placeholder="Buscar por nombre, apellido o email…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
       {isPending && (
         <div className="flex justify-center py-12">
@@ -71,9 +95,17 @@ export default function AdminUsersList() {
         </Card>
       )}
 
-      {data && data.length > 0 && (
+      {data && data.length > 0 && visibleUsers.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Ningún usuario coincide con la búsqueda.
+          </CardContent>
+        </Card>
+      )}
+
+      {visibleUsers.length > 0 && (
         <div className="grid gap-2">
-          {data.map((u) => (
+          {visibleUsers.map((u) => (
             <UserRow
               key={u.id}
               user={u}
@@ -116,27 +148,25 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
     }
     try {
       await create.mutateAsync(input)
+      toast.success('Usuario creado')
       onClose()
-    } catch {
-      // Mensaje abajo
+    } catch (err) {
+      toast.error(getApiErrorMessage(err))
     }
   }
 
-  const errorMessage = (() => {
-    const err = create.error as { response?: { data?: { message?: string | string[] } } } | null
-    const msg = err?.response?.data?.message
-    return Array.isArray(msg) ? msg.join(', ') : msg ?? null
-  })()
+  // Error inline (además del toast): null mientras no haya error.
+  const errorMessage = create.error ? getApiErrorMessage(create.error) : null
 
   return (
-    <ModalBackdrop onClose={onClose}>
+    <ModalBackdrop onClose={onClose} titleId="create-user-title">
       <div className="w-full max-w-md rounded-2xl bg-card text-card-foreground shadow-2xl p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-200">
         <header className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-bold">Nuevo usuario</h2>
+            <h2 id="create-user-title" className="font-bold">Nuevo usuario</h2>
             <p className="text-xs text-muted-foreground">El usuario podrá iniciar sesión con la contraseña que ingreses.</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="-mr-2 -mt-2">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Cerrar" className="-mr-2 -mt-2">
             <X />
           </Button>
         </header>
@@ -168,9 +198,8 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
 
           <div className="space-y-2">
             <Label htmlFor="new-password">Contraseña</Label>
-            <Input
+            <PasswordInput
               id="new-password"
-              type="text"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -191,6 +220,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
                     key={value}
                     type="button"
                     onClick={() => toggleRole(value)}
+                    aria-pressed={active}
                     className={cn(
                       'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold ring-1 ring-inset transition',
                       active
@@ -349,27 +379,25 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
     }
     try {
       await update.mutateAsync({ id: user.id, input })
+      toast.success('Usuario actualizado')
       onClose()
-    } catch {
-      // El error queda en update.error, se muestra abajo
+    } catch (err) {
+      toast.error(getApiErrorMessage(err))
     }
   }
 
-  const errorMessage = (() => {
-    const err = update.error as { response?: { data?: { message?: string | string[] } } } | null
-    const msg = err?.response?.data?.message
-    return Array.isArray(msg) ? msg.join(', ') : msg ?? null
-  })()
+  // Error inline (además del toast): null mientras no haya error.
+  const errorMessage = update.error ? getApiErrorMessage(update.error) : null
 
   return (
-    <ModalBackdrop onClose={onClose}>
+    <ModalBackdrop onClose={onClose} titleId="edit-user-title">
       <div className="w-full max-w-md rounded-2xl bg-card text-card-foreground shadow-2xl p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-200">
         <header className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-bold">Editar usuario</h2>
+            <h2 id="edit-user-title" className="font-bold">Editar usuario</h2>
             <p className="text-xs text-muted-foreground truncate">{user.email}</p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="-mr-2 -mt-2">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Cerrar" className="-mr-2 -mt-2">
             <X />
           </Button>
         </header>
@@ -398,6 +426,7 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
                     type="button"
                     onClick={() => !disabled && toggleRole(value)}
                     disabled={disabled}
+                    aria-pressed={active}
                     title={disabled ? 'No puedes quitarte el rol admin' : ''}
                     className={cn(
                       'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold ring-1 ring-inset transition',
@@ -439,9 +468,8 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
             <Label htmlFor="edit-new-password">
               Nueva contraseña <span className="text-muted-foreground font-normal">(opcional)</span>
             </Label>
-            <Input
+            <PasswordInput
               id="edit-new-password"
-              type="text"
               autoComplete="new-password"
               placeholder="Dejá vacío para no cambiar"
               value={newPassword}
@@ -475,27 +503,25 @@ function DeleteUserModal({ user, onClose }: { user: AdminUser; onClose: () => vo
   async function handleDelete() {
     try {
       await del.mutateAsync(user.id)
+      toast.success('Usuario eliminado')
       onClose()
-    } catch {
-      // Error visible abajo
+    } catch (err) {
+      toast.error(getApiErrorMessage(err))
     }
   }
 
-  const errorMessage = (() => {
-    const err = del.error as { response?: { data?: { message?: string | string[] } } } | null
-    const msg = err?.response?.data?.message
-    return Array.isArray(msg) ? msg.join(', ') : msg ?? null
-  })()
+  // Error inline (además del toast): null mientras no haya error.
+  const errorMessage = del.error ? getApiErrorMessage(del.error) : null
 
   return (
-    <ModalBackdrop onClose={onClose}>
+    <ModalBackdrop onClose={onClose} titleId="delete-user-title">
       <div className="w-full max-w-md rounded-2xl bg-card text-card-foreground shadow-2xl p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-200">
         <header className="flex items-start gap-3">
           <div className="size-10 rounded-full bg-destructive/15 text-destructive flex items-center justify-center shrink-0">
             <Trash2 className="size-5" />
           </div>
           <div className="flex-1">
-            <h2 className="font-bold">Eliminar usuario</h2>
+            <h2 id="delete-user-title" className="font-bold">Eliminar usuario</h2>
             <p className="text-sm text-muted-foreground">
               Esta acción marca al usuario como eliminado y revoca sus sesiones. Sus inscripciones a partidos quedan en
               la base de datos pero no podrá volver a iniciar sesión.
@@ -526,18 +552,67 @@ function DeleteUserModal({ user, onClose }: { user: AdminUser; onClose: () => vo
 function ModalBackdrop({
   children,
   onClose,
+  titleId,
 }: {
   children: React.ReactNode
   onClose: () => void
+  // Id del <h2> del título: el diálogo se labela con él (aria-labelledby).
+  titleId: string
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  // Escape cierra el modal. El componente solo monta cuando el modal está
+  // abierto, así que el cleanup se lleva el listener al cerrar.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
+  // Foco inicial: primer input del formulario, o el primer botón (cerrar/cancelar).
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    const target = dialog.querySelector<HTMLElement>('input') ?? dialog.querySelector<HTMLElement>('button')
+    target?.focus()
+  }, [])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150"
       onClick={onClose}
     >
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md"
+      >
         {children}
       </div>
+    </div>
+  )
+}
+
+// Input de contraseña con botón de visibilidad (eye/eye-off).
+function PasswordInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <div className="relative">
+      <Input {...props} type={visible ? 'text' : 'password'} className="pr-10" />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+        aria-pressed={visible}
+        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground hover:text-foreground"
+      >
+        {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </button>
     </div>
   )
 }

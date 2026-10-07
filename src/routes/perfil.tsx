@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Camera, ImagePlus, KeyRound, Loader2, LogOut, Save, UserCircle2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,6 +16,7 @@ import {
   useUploadProfilePhoto,
 } from '@/lib/api-profile'
 import { resolveAssetUrl } from '@/lib/assets'
+import { getApiErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 
 interface FormState {
@@ -22,6 +24,18 @@ interface FormState {
   lastName: string
   jerseyName: string
   preferredNumber: string
+}
+
+// Validación previa al upload: el backend solo acepta imágenes dentro de estos
+// límites (5 MB avatar / 8 MB hero) — si falla, no se manda nada.
+function validateImageFile(file: File, maxMb: number): string | null {
+  if (!file.type.startsWith('image/')) {
+    return 'El archivo debe ser una imagen (JPG, PNG o WebP).'
+  }
+  if (file.size > maxMb * 1024 * 1024) {
+    return `La imagen supera los ${maxMb} MB.`
+  }
+  return null
 }
 
 export default function PerfilPage() {
@@ -46,62 +60,88 @@ export default function PerfilPage() {
   })
 
   // Sincronizar form cuando llega el perfil (o se actualiza tras un save).
-  useEffect(() => {
-    if (!profile) return
-    setForm({
-      name: profile.name ?? '',
-      lastName: profile.lastName ?? '',
-      jerseyName: profile.jerseyName ?? '',
-      preferredNumber: profile.preferredNumber?.toString() ?? '',
-    })
-  }, [profile])
+  // Patrón "adjusting state when props change" (react.dev): se ajusta en el
+  // render, no en un effect, para evitar renders en cascada.
+  const [prevProfile, setPrevProfile] = useState(profile)
+  if (profile !== prevProfile) {
+    setPrevProfile(profile)
+    if (profile) {
+      setForm({
+        name: profile.name ?? '',
+        lastName: profile.lastName ?? '',
+        jerseyName: profile.jerseyName ?? '',
+        preferredNumber: profile.preferredNumber?.toString() ?? '',
+      })
+    }
+  }
 
   const isAdmin = currentUser?.roles.some((r) => r === 'admin' || r === 'supervisor')
   const backHref = isAdmin ? '/admin' : '/partido-activo'
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    await update.mutateAsync({
-      name: form.name.trim(),
-      lastName: form.lastName.trim() || undefined,
-      jerseyName: form.jerseyName.trim() || undefined,
-      preferredNumber: form.preferredNumber
-        ? Number(form.preferredNumber)
-        : undefined,
-    })
+    try {
+      await update.mutateAsync({
+        name: form.name.trim(),
+        lastName: form.lastName.trim() || undefined,
+        jerseyName: form.jerseyName.trim() || undefined,
+        preferredNumber: form.preferredNumber
+          ? Number(form.preferredNumber)
+          : undefined,
+      })
+      toast.success('Cambios guardados')
+    } catch (err) {
+      toast.error(getApiErrorMessage(err))
+    }
   }
 
   async function handlePhotoSelected(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = '' // permite reseleccionar el mismo archivo después
     if (!file) return
-    await upload.mutateAsync(file)
+    const validationError = validateImageFile(file, 5)
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+    try {
+      await upload.mutateAsync(file)
+      toast.success('Foto actualizada')
+    } catch (err) {
+      toast.error(getApiErrorMessage(err))
+    }
   }
 
   async function handleHeroPhotoSelected(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    await heroUpload.mutateAsync(file)
+    const validationError = validateImageFile(file, 8)
+    if (validationError) {
+      toast.error(validationError)
+      return
+    }
+    try {
+      await heroUpload.mutateAsync(file)
+      toast.success('Foto de cuerpo entero actualizada')
+    } catch (err) {
+      toast.error(getApiErrorMessage(err))
+    }
   }
 
   async function handleLogout() {
-    await logout.mutateAsync()
+    try {
+      await logout.mutateAsync()
+    } catch {
+      // useLogout ya limpia la sesión local en onSettled aunque falle la revocación.
+    }
     navigate('/login', { replace: true })
   }
 
-  const updateError = (() => {
-    const err = update.error as { response?: { data?: { message?: string | string[] } } } | null
-    return err?.response?.data?.message ?? null
-  })()
-  const uploadError = (() => {
-    const err = upload.error as { response?: { data?: { message?: string | string[] } } } | null
-    return err?.response?.data?.message ?? null
-  })()
-  const heroUploadError = (() => {
-    const err = heroUpload.error as { response?: { data?: { message?: string | string[] } } } | null
-    return err?.response?.data?.message ?? null
-  })()
+  // Mensajes inline (además de los toasts): null mientras no haya error.
+  const updateError = update.error ? getApiErrorMessage(update.error) : null
+  const uploadError = upload.error ? getApiErrorMessage(upload.error) : null
+  const heroUploadError = heroUpload.error ? getApiErrorMessage(heroUpload.error) : null
 
   return (
     <div className="min-h-svh bg-background">
@@ -182,9 +222,7 @@ export default function PerfilPage() {
                   JPG, PNG o WebP · máximo 5 MB
                 </p>
                 {uploadError && (
-                  <p className="text-sm text-destructive text-center">
-                    {Array.isArray(uploadError) ? uploadError.join(', ') : uploadError}
-                  </p>
+                  <p className="text-sm text-destructive text-center">{uploadError}</p>
                 )}
               </CardContent>
             </Card>
@@ -225,9 +263,7 @@ export default function PerfilPage() {
                   JPG, PNG o WebP · máximo 8 MB · idealmente vertical (aspect 9:16)
                 </p>
                 {heroUploadError && (
-                  <p className="text-sm text-destructive text-center">
-                    {Array.isArray(heroUploadError) ? heroUploadError.join(', ') : heroUploadError}
-                  </p>
+                  <p className="text-sm text-destructive text-center">{heroUploadError}</p>
                 )}
               </CardContent>
             </Card>
@@ -297,13 +333,7 @@ export default function PerfilPage() {
                   </div>
 
                   {updateError && (
-                    <p className="text-sm text-destructive">
-                      {Array.isArray(updateError) ? updateError.join(', ') : updateError}
-                    </p>
-                  )}
-
-                  {update.isSuccess && !update.isPending && (
-                    <p className="text-sm text-primary">✓ Cambios guardados</p>
+                    <p className="text-sm text-destructive">{updateError}</p>
                   )}
 
                   <div className="flex justify-end">
@@ -347,19 +377,16 @@ function ChangePasswordCard() {
     }
     try {
       await change.mutateAsync({ currentPassword, newPassword })
+      toast.success('Contraseña actualizada')
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-    } catch {
-      // El error queda en change.error
+    } catch (err) {
+      toast.error(getApiErrorMessage(err))
     }
   }
 
-  const apiError = (() => {
-    const err = change.error as { response?: { data?: { message?: string | string[] } } } | null
-    const msg = err?.response?.data?.message
-    return Array.isArray(msg) ? msg.join(', ') : msg ?? null
-  })()
+  const apiError = change.error ? getApiErrorMessage(change.error) : null
 
   return (
     <Card>
@@ -419,9 +446,6 @@ function ChangePasswordCard() {
 
           {localError && <p className="text-sm text-destructive">{localError}</p>}
           {apiError && <p className="text-sm text-destructive">{apiError}</p>}
-          {change.isSuccess && (
-            <p className="text-sm text-primary">✓ Contraseña actualizada</p>
-          )}
 
           <div className="flex justify-end">
             <Button type="submit" disabled={change.isPending}>

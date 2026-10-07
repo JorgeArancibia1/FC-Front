@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Loader2, Trash2, AlertCircle, Users } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -11,6 +12,7 @@ import { TeamRoster } from '@/components/team-roster'
 import { useCurrentUser } from '@/hooks/use-auth'
 import { useMatchRealtime } from '@/hooks/use-match-realtime'
 import { useDeleteMatch, useMatch, useUpdateMatch } from '@/lib/api-matches'
+import { getApiErrorMessage } from '@/lib/errors'
 import { formatMatchDate, toDateTimeLocal } from '@/lib/format'
 import { buildTeams } from '@/lib/teams'
 import type { MatchStatus } from '@/types/match'
@@ -34,10 +36,8 @@ export default function AdminMatchDetail() {
 
   if (!id) return <Navigate to="/admin/partidos" replace />
 
-  const updateError = (() => {
-    const err = update.error as { response?: { data?: { message?: string | string[] } } } | null
-    return err?.response?.data?.message ?? null
-  })()
+  // Error inline en el formulario (además del toast): null mientras no haya error.
+  const updateError = update.error ? getApiErrorMessage(update.error) : null
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
@@ -88,7 +88,15 @@ export default function AdminMatchDetail() {
                   id="status"
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={data.status}
-                  onChange={(e) => update.mutate({ status: e.target.value as MatchStatus })}
+                  onChange={(e) =>
+                    update.mutate(
+                      { status: e.target.value as MatchStatus },
+                      {
+                        onSuccess: () => toast.success('Estado actualizado'),
+                        onError: (err) => toast.error(getApiErrorMessage(err)),
+                      },
+                    )
+                  }
                   disabled={update.isPending}
                 >
                   {STATUSES.map((s) => (
@@ -109,7 +117,12 @@ export default function AdminMatchDetail() {
                   requiredPlayers: data.requiredPlayers,
                   notes: data.notes ?? '',
                 }}
-                onSubmit={(input) => update.mutate(input)}
+                onSubmit={(input) =>
+                  update.mutate(input, {
+                    onSuccess: () => toast.success('Cambios guardados'),
+                    onError: (err) => toast.error(getApiErrorMessage(err)),
+                  })
+                }
               />
             </CardContent>
           </Card>
@@ -172,8 +185,13 @@ export default function AdminMatchDetail() {
                     variant="destructive"
                     disabled={remove.isPending}
                     onClick={async () => {
-                      await remove.mutateAsync(id)
-                      navigate('/admin/partidos', { replace: true })
+                      try {
+                        await remove.mutateAsync(id)
+                        toast.success('Partido eliminado')
+                        navigate('/admin/partidos', { replace: true })
+                      } catch (err) {
+                        toast.error(getApiErrorMessage(err))
+                      }
                     }}
                   >
                     {remove.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}

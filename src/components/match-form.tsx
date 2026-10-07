@@ -18,7 +18,12 @@ interface Props {
   submitLabel: string
   submitting: boolean
   errorMessage?: string | string[] | null
-  onSubmit: (input: { place: string; dateTime: string; requiredPlayers: number; notes?: string }) => void
+  onSubmit: (input: {
+    place: string
+    dateTime: string
+    requiredPlayers: number
+    notes?: string
+  }) => void | Promise<void>
 }
 
 export function MatchForm({ initial, submitLabel, submitting, errorMessage, onSubmit }: Props) {
@@ -29,14 +34,19 @@ export function MatchForm({ initial, submitLabel, submitting, errorMessage, onSu
     notes: initial?.notes ?? '',
   })
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onSubmit({
-      place: values.place.trim(),
-      dateTime: fromDateTimeLocal(values.dateTimeLocal),
-      requiredPlayers: Number(values.requiredPlayers),
-      notes: values.notes.trim() || undefined,
-    })
+    try {
+      await onSubmit({
+        place: values.place.trim(),
+        dateTime: fromDateTimeLocal(values.dateTimeLocal),
+        requiredPlayers: Number(values.requiredPlayers),
+        notes: values.notes.trim() || undefined,
+      })
+    } catch {
+      // El error ya lo maneja quien dispara la mutación (toast + errorMessage);
+      // acá solo evitamos el rechazo sin capturar del promise.
+    }
   }
 
   return (

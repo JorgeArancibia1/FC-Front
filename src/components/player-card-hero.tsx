@@ -120,11 +120,9 @@ function FilledPlayerCard({
     }
     const onDown = (e: PointerEvent) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return
-      console.log('[hero] pointerdown', user.id, e.pointerType)
       start = { x: e.clientX, y: e.clientY }
       clearTimer()
       timer = window.setTimeout(() => {
-        console.log('[hero] TIMER FIRED', user.id)
         active = true
         onHeroEnter(user.id)
       }, PRESS_HOLD_MS)
@@ -134,39 +132,35 @@ function FilledPlayerCard({
       const dx = Math.abs(e.clientX - start.x)
       const dy = Math.abs(e.clientY - start.y)
       if (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX) {
-        console.log('[hero] cancelled by move', dx, dy)
         clearTimer()
         fireLeave()
         start = null
       }
     }
-    const makeRelease = (label: string) => (e: PointerEvent) => {
-      console.log('[hero]', label, user.id, e.pointerType)
+    // Soltar / cancelar / salir: corta el timer y cierra el reveal si estaba activo.
+    const release = () => {
       clearTimer()
       fireLeave()
       start = null
     }
-    const onUp = makeRelease('pointerup')
-    const onCancel = makeRelease('pointercancel')
-    const onLeave = makeRelease('pointerleave')
     const onCtx = (e: MouseEvent) => {
       if (active) e.preventDefault()
     }
 
     el.addEventListener('pointerdown', onDown)
     el.addEventListener('pointermove', onMove)
-    el.addEventListener('pointerup', onUp)
-    el.addEventListener('pointercancel', onCancel)
-    el.addEventListener('pointerleave', onLeave)
+    el.addEventListener('pointerup', release)
+    el.addEventListener('pointercancel', release)
+    el.addEventListener('pointerleave', release)
     el.addEventListener('contextmenu', onCtx)
 
     return () => {
       clearTimer()
       el.removeEventListener('pointerdown', onDown)
       el.removeEventListener('pointermove', onMove)
-      el.removeEventListener('pointerup', onUp)
-      el.removeEventListener('pointercancel', onCancel)
-      el.removeEventListener('pointerleave', onLeave)
+      el.removeEventListener('pointerup', release)
+      el.removeEventListener('pointercancel', release)
+      el.removeEventListener('pointerleave', release)
       el.removeEventListener('contextmenu', onCtx)
     }
   }, [user.id, onHeroEnter, onHeroLeave])

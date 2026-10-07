@@ -57,16 +57,16 @@ export function AdminShell() {
               </Link>
             </Button>
             <Button asChild variant="ghost" size="icon" className="sm:hidden">
-              <Link to="/partido-activo" title="Vista del partido">
+              <Link to="/partido-activo" title="Vista del partido" aria-label="Vista del partido">
                 <PlaySquare />
               </Link>
             </Button>
             <Button asChild variant="ghost" size="sm">
-              <Link to="/perfil">
+              <Link to="/perfil" aria-label="Mi perfil">
                 <UserCircle2 /> <span className="hidden sm:inline">Mi perfil</span>
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
+            <Button variant="ghost" size="sm" onClick={handleLogout} aria-label="Cerrar sesión">
               <LogOut /> <span className="hidden sm:inline">Salir</span>
             </Button>
           </div>
@@ -75,16 +75,7 @@ export function AdminShell() {
         <nav className="mx-auto max-w-6xl px-4 flex gap-1 overflow-x-auto">
           {NAV.map((item) => {
             const { to, label, icon: Icon, end } = item
-            const disabled = 'disabled' in item ? item.disabled : false
-            return disabled ? (
-              <span
-                key={to}
-                className="px-3 py-2.5 text-sm font-medium text-muted-foreground/60 cursor-not-allowed inline-flex items-center gap-2"
-                title="Próximamente"
-              >
-                <Icon className="size-4" /> {label}
-              </span>
-            ) : (
+            return (
               <NavLink
                 key={to}
                 to={to}

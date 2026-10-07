@@ -1,7 +1,9 @@
 import { CheckCircle2, Loader2, UserMinus, UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/hooks/use-auth'
 import { useRegisterToMatch, useUnregisterFromMatch } from '@/lib/api-matches'
+import { getApiErrorMessage } from '@/lib/errors'
 import type { MatchDetail } from '@/types/match'
 
 interface Props {
@@ -19,12 +21,24 @@ export function MatchEnrollButton({ match }: Props) {
   const isFull = match.registrations.length >= match.requiredPlayers
   const isOpen = match.status === 'open'
 
-  const mutationError =
-    (register.error as { response?: { data?: { message?: string | string[] } } } | null)?.response?.data
-      ?.message ??
-    (unregister.error as { response?: { data?: { message?: string | string[] } } } | null)?.response?.data
-      ?.message ??
-    null
+  // Con el update optimista la UI reacciona al instante; acá va el feedback.
+  function handleRegister() {
+    register.mutate(undefined, {
+      onSuccess: () => toast.success('Inscripción confirmada'),
+      onError: (err) => toast.error(getApiErrorMessage(err)),
+    })
+  }
+
+  function handleUnregister() {
+    if (!window.confirm('¿Desinscribirte del partido?')) return
+    unregister.mutate(undefined, {
+      onSuccess: () => toast.success('Te desinscribiste del partido'),
+      onError: (err) => toast.error(getApiErrorMessage(err)),
+    })
+  }
+
+  const firstError = register.error ?? unregister.error
+  const mutationError = firstError ? getApiErrorMessage(firstError) : null
 
   if (myReg) {
     return (
@@ -36,16 +50,12 @@ export function MatchEnrollButton({ match }: Props) {
           variant="outline"
           className="w-full"
           disabled={unregister.isPending}
-          onClick={() => unregister.mutate()}
+          onClick={handleUnregister}
         >
           {unregister.isPending ? <Loader2 className="animate-spin" /> : <UserMinus />}
           Retirarme
         </Button>
-        {mutationError && (
-          <p className="text-sm text-destructive">
-            {Array.isArray(mutationError) ? mutationError.join(', ') : mutationError}
-          </p>
-        )}
+        {mutationError && <p className="text-sm text-destructive">{mutationError}</p>}
       </div>
     )
   }
@@ -72,15 +82,13 @@ export function MatchEnrollButton({ match }: Props) {
         size="lg"
         className="w-full"
         disabled={register.isPending}
-        onClick={() => register.mutate()}
+        onClick={handleRegister}
       >
         {register.isPending ? <Loader2 className="animate-spin" /> : <UserPlus />}
         Inscribirme al partido
       </Button>
       {mutationError && (
-        <p className="text-sm text-destructive text-center">
-          {Array.isArray(mutationError) ? mutationError.join(', ') : mutationError}
-        </p>
+        <p className="text-sm text-destructive text-center">{mutationError}</p>
       )}
     </div>
   )

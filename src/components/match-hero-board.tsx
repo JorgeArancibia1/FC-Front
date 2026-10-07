@@ -47,22 +47,27 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
     [],
   )
 
-  // Detección de nuevas llegadas (igual que antes).
+  // Detección de nuevas llegadas: los ids "frescos" se calculan en un efecto,
+  // nunca durante el render (StrictMode renderiza doble en dev y las mutaciones
+  // de las refs dentro del useMemo hacían que la animación de llegada nunca
+  // disparara: al segundo render el id ya estaba "visto").
   const seenIds = useRef<Set<string>>(new Set())
   const initialMount = useRef(true)
-  const newIds = useMemo(() => {
+  const [newIds, setNewIds] = useState<Set<string>>(() => new Set())
+  useEffect(() => {
     const currentIds = new Set(match.registrations.map((r) => r.id))
     if (initialMount.current) {
+      // Primer render: todo lo que ya está inscripto es "viejo".
       initialMount.current = false
       seenIds.current = currentIds
-      return new Set<string>()
+      return
     }
     const fresh = new Set<string>()
     for (const id of currentIds) {
       if (!seenIds.current.has(id)) fresh.add(id)
     }
     seenIds.current = currentIds
-    return fresh
+    setNewIds(fresh)
   }, [match.registrations])
 
   // Stagger inicial
@@ -150,7 +155,6 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
           })
         }
 
-        console.log('[DnD] reorder', assignments)
         reorderRef.current.mutate(assignments)
       },
     })
