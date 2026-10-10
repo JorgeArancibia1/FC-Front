@@ -1,10 +1,21 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Loader2, Trash2, AlertCircle, Users } from 'lucide-react'
+import {
+  ArrowLeft,
+  Trash2,
+  Users,
+  MapPin,
+  Clock,
+  UserCog,
+  Trophy,
+  ShieldAlert,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { PageLoader, ErrorState } from '@/components/ui/feedback'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { MatchEnrollButton } from '@/components/match-enroll-button'
 import { MatchForm } from '@/components/match-form'
 import { MatchStatusBadge } from '@/components/match-status-badge'
@@ -12,6 +23,7 @@ import { TeamRoster } from '@/components/team-roster'
 import { useCurrentUser } from '@/hooks/use-auth'
 import { useMatchRealtime } from '@/hooks/use-match-realtime'
 import { useDeleteMatch, useMatch, useUpdateMatch } from '@/lib/api-matches'
+import { isAdmin, isManager } from '@/lib/roles'
 import { getApiErrorMessage } from '@/lib/errors'
 import { formatMatchDate, toDateTimeLocal } from '@/lib/format'
 import { buildTeams } from '@/lib/teams'
@@ -32,105 +44,122 @@ export default function AdminMatchDetail() {
   const remove = useDeleteMatch()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const currentUser = useCurrentUser()
+  const admin = isAdmin(currentUser)
+  const manager = isManager(currentUser)
   useMatchRealtime(id)
 
   if (!id) return <Navigate to="/admin/partidos" replace />
 
-  // Error inline en el formulario (además del toast): null mientras no haya error.
   const updateError = update.error ? getApiErrorMessage(update.error) : null
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      <Button asChild variant="ghost" size="sm" className="-ml-3">
+    <div className="mx-auto max-w-3xl space-y-5">
+      <Button asChild variant="ghost" size="sm" className="-ml-2">
         <Link to="/admin/partidos">
-          <ArrowLeft /> Volver a la lista
+          <ArrowLeft /> Volver a partidos
         </Link>
       </Button>
 
-      {isPending && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin text-muted-foreground" />
-        </div>
-      )}
+      {isPending && <PageLoader label="Cargando partido…" />}
 
       {isError && (
-        <Card className="border-destructive/40">
-          <CardContent className="py-6 flex items-center gap-3 text-sm">
-            <AlertCircle className="size-5 text-destructive shrink-0" />
-            <p>{(error as Error)?.message ?? 'Error al cargar el partido'}</p>
-          </CardContent>
-        </Card>
+        <ErrorState
+          title="No se pudo cargar el partido"
+          description={(error as Error)?.message ?? 'Error al cargar el partido'}
+        />
       )}
 
       {data && (
         <>
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <h2 className="text-xl font-bold">{data.place}</h2>
-              <p className="text-sm text-muted-foreground">
-                {formatMatchDate(data.dateTime)} · creado por {data.createdBy.name}
-              </p>
-            </div>
-            <MatchStatusBadge status={data.status} />
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Editar partido</CardTitle>
-              <CardDescription>
-                Los cambios se aplican inmediatamente. La fecha está en tu zona horaria.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="status">Estado</Label>
-                <select
-                  id="status"
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={data.status}
-                  onChange={(e) =>
-                    update.mutate(
-                      { status: e.target.value as MatchStatus },
-                      {
-                        onSuccess: () => toast.success('Estado actualizado'),
-                        onError: (err) => toast.error(getApiErrorMessage(err)),
-                      },
-                    )
-                  }
-                  disabled={update.isPending}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
+          {/* Encabezado */}
+          <Card className="overflow-hidden">
+            <div className="h-1.5 bg-gradient-to-r from-primary via-team-a to-team-b" />
+            <CardContent className="flex flex-wrap items-start justify-between gap-3 p-5">
+              <div className="min-w-0">
+                <h1 className="flex items-center gap-2 text-xl font-black">
+                  <Trophy className="size-5 text-primary" />
+                  <span className="truncate">{data.place}</span>
+                </h1>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="size-4" /> {formatMatchDate(data.dateTime)}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin className="size-4" /> {data.place}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Users className="size-4" /> {data.registrations.length} / {data.requiredPlayers}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Creado por {data.createdBy.name}</p>
               </div>
-
-              <MatchForm
-                submitLabel="Guardar cambios"
-                submitting={update.isPending}
-                errorMessage={updateError}
-                initial={{
-                  place: data.place,
-                  dateTimeLocal: toDateTimeLocal(data.dateTime),
-                  requiredPlayers: data.requiredPlayers,
-                  notes: data.notes ?? '',
-                }}
-                onSubmit={(input) =>
-                  update.mutate(input, {
-                    onSuccess: () => toast.success('Cambios guardados'),
-                    onError: (err) => toast.error(getApiErrorMessage(err)),
-                  })
-                }
-              />
+              <MatchStatusBadge status={data.status} />
             </CardContent>
           </Card>
 
+          {/* Edición (Admin/Supervisor) */}
+          {manager && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <UserCog className="size-5 text-primary" /> Editar partido
+                </CardTitle>
+                <CardDescription>
+                  Los cambios se aplican inmediatamente. La fecha está en tu zona horaria.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="status">Estado del partido</Label>
+                  <select
+                    id="status"
+                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={data.status}
+                    onChange={(e) =>
+                      update.mutate(
+                        { status: e.target.value as MatchStatus },
+                        {
+                          onSuccess: () => toast.success('Estado actualizado'),
+                          onError: (err) => toast.error(getApiErrorMessage(err)),
+                        },
+                      )
+                    }
+                    disabled={update.isPending}
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <MatchForm
+                  submitLabel="Guardar cambios"
+                  submitting={update.isPending}
+                  errorMessage={updateError}
+                  initial={{
+                    place: data.place,
+                    dateTimeLocal: toDateTimeLocal(data.dateTime),
+                    requiredPlayers: data.requiredPlayers,
+                    notes: data.notes ?? '',
+                  }}
+                  onSubmit={(input) =>
+                    update.mutate(input, {
+                      onSuccess: () => toast.success('Cambios guardados'),
+                      onError: (err) => toast.error(getApiErrorMessage(err)),
+                    })
+                  }
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Plantilla */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg inline-flex items-center gap-2">
-                <Users className="size-5" />
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="size-5 text-primary" />
                 Plantilla ({data.registrations.length} / {data.requiredPlayers})
               </CardTitle>
               <CardDescription>Jugadores inscritos en este partido.</CardDescription>
@@ -165,42 +194,41 @@ export default function AdminMatchDetail() {
             </CardContent>
           </Card>
 
-          <Card className="border-destructive/40">
-            <CardHeader>
-              <CardTitle className="text-lg text-destructive">Zona peligrosa</CardTitle>
-              <CardDescription>Eliminar el partido borra también las inscripciones.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!confirmingDelete ? (
+          {/* Zona peligrosa (solo Admin) */}
+          {admin && (
+            <Card className="border-destructive/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg text-destructive">
+                  <ShieldAlert className="size-5" /> Zona peligrosa
+                </CardTitle>
+                <CardDescription>Eliminar el partido borra también las inscripciones.</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <Button variant="destructive" onClick={() => setConfirmingDelete(true)}>
                   <Trash2 /> Eliminar partido
                 </Button>
-              ) : (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-medium flex-1">¿Confirmas? No se puede deshacer.</p>
-                  <Button variant="outline" onClick={() => setConfirmingDelete(false)}>
-                    Cancelar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={remove.isPending}
-                    onClick={async () => {
-                      try {
-                        await remove.mutateAsync(id)
-                        toast.success('Partido eliminado')
-                        navigate('/admin/partidos', { replace: true })
-                      } catch (err) {
-                        toast.error(getApiErrorMessage(err))
-                      }
-                    }}
-                  >
-                    {remove.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
-                    Sí, eliminar
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
+
+          <ConfirmDialog
+            open={confirmingDelete}
+            title="Eliminar partido"
+            description={`Se eliminará "${data.place}" junto con todas sus inscripciones. No se puede deshacer.`}
+            confirmLabel="Sí, eliminar"
+            destructive
+            loading={remove.isPending}
+            onCancel={() => setConfirmingDelete(false)}
+            onConfirm={async () => {
+              try {
+                await remove.mutateAsync(id)
+                toast.success('Partido eliminado')
+                navigate('/admin/partidos', { replace: true })
+              } catch (err) {
+                toast.error(getApiErrorMessage(err))
+              }
+            }}
+          />
         </>
       )}
     </div>

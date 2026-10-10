@@ -11,26 +11,23 @@ interface Props {
   currentUserId?: string
 }
 
-const TEAM_STYLES: Record<TeamKey, {
-  ring: string
-  bg: string
-  badgeBg: string
-  badgeText: string
-  accent: string
-}> = {
+const TEAM_STYLES: Record<
+  TeamKey,
+  { ring: string; bg: string; badgeBg: string; badgeText: string; accent: string }
+> = {
   A: {
-    ring: 'border-primary/30',
-    bg: 'bg-primary/5',
-    badgeBg: 'bg-primary',
-    badgeText: 'text-primary-foreground',
-    accent: 'text-primary',
+    ring: 'border-team-a/40',
+    bg: 'bg-team-a/10',
+    badgeBg: 'bg-team-a',
+    badgeText: 'text-team-a-foreground',
+    accent: 'text-lime-700 dark:text-lime-300',
   },
   B: {
-    ring: 'border-sky-500/30',
-    bg: 'bg-sky-500/5',
-    badgeBg: 'bg-sky-600',
-    badgeText: 'text-white',
-    accent: 'text-sky-700 dark:text-sky-400',
+    ring: 'border-team-b/40',
+    bg: 'bg-team-b/10',
+    badgeBg: 'bg-team-b',
+    badgeText: 'text-team-b-foreground',
+    accent: 'text-sky-700 dark:text-sky-300',
   },
 }
 
@@ -39,18 +36,18 @@ export function TeamRoster({ team, players, capacity, currentUserId }: Props) {
   const emptySlots = Math.max(0, capacity - players.length)
 
   return (
-    <div className={cn('rounded-xl border-2 overflow-hidden', styles.ring)}>
-      <header className={cn('px-4 py-3 flex items-center gap-3', styles.bg)}>
+    <div className={cn('overflow-hidden rounded-xl border-2', styles.ring)}>
+      <header className={cn('flex items-center gap-3 px-4 py-3', styles.bg)}>
         <span
           className={cn(
-            'size-10 rounded-lg flex items-center justify-center font-black text-lg shadow-sm',
+            'flex size-10 items-center justify-center rounded-lg font-display text-xl shadow-sm',
             styles.badgeBg,
             styles.badgeText,
           )}
         >
           {team}
         </span>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="font-bold leading-tight">Equipo {team}</h3>
           <p className={cn('text-xs font-medium', styles.accent)}>
             {players.length} / {capacity} jugadores
@@ -64,12 +61,9 @@ export function TeamRoster({ team, players, capacity, currentUserId }: Props) {
           return (
             <li
               key={r.id}
-              className={cn(
-                'p-3 flex items-center gap-3 transition-colors',
-                isMe && styles.bg,
-              )}
+              className={cn('flex items-center gap-3 p-3 transition-colors', isMe && styles.bg)}
             >
-              <span className="w-6 text-center text-xs font-semibold text-muted-foreground tabular-nums shrink-0">
+              <span className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums text-muted-foreground">
                 {idx + 1}
               </span>
               {r.user.photoUrl ? (
@@ -80,35 +74,30 @@ export function TeamRoster({ team, players, capacity, currentUserId }: Props) {
                   decoding="async"
                   width={44}
                   height={44}
-                  className="size-11 rounded-full object-cover shrink-0"
+                  className="size-11 shrink-0 rounded-full object-cover"
                 />
               ) : (
                 <div
                   className={cn(
-                    'size-11 rounded-full flex items-center justify-center text-sm font-bold shrink-0',
+                    'flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-bold',
                     isMe ? cn(styles.badgeBg, styles.badgeText) : 'bg-muted text-muted-foreground',
                   )}
                 >
                   {r.user.name.slice(0, 2).toUpperCase()}
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate leading-tight">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold leading-tight">
                   {r.user.jerseyName || `${r.user.name} ${r.user.lastName ?? ''}`.trim()}
-                  {isMe && (
-                    <span className={cn('ml-2 text-xs font-medium', styles.accent)}>(tú)</span>
-                  )}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {r.user.name} {r.user.lastName ?? ''}
+                  {isMe && <span className={cn('ml-2 text-xs font-medium', styles.accent)}>(tú)</span>}
                 </p>
               </div>
               {r.user.preferredNumber != null && (
                 <span
                   className={cn(
-                    'size-10 rounded-md font-black flex items-center justify-center text-base shrink-0',
-                    styles.bg,
-                    styles.accent,
+                    'flex size-9 shrink-0 items-center justify-center rounded-md font-display text-lg',
+                    styles.badgeBg,
+                    styles.badgeText,
                   )}
                 >
                   {r.user.preferredNumber}
@@ -119,17 +108,14 @@ export function TeamRoster({ team, players, capacity, currentUserId }: Props) {
         })}
 
         {Array.from({ length: emptySlots }).map((_, idx) => (
-          <li
-            key={`empty-${idx}`}
-            className="p-3 flex items-center gap-3 text-muted-foreground/60"
-          >
-            <span className="w-6 text-center text-xs font-semibold tabular-nums shrink-0">
+          <li key={`empty-${idx}`} className="flex items-center gap-3 p-3 text-muted-foreground/60">
+            <span className="w-6 shrink-0 text-center text-xs font-semibold tabular-nums">
               {players.length + idx + 1}
             </span>
-            <div className="size-11 rounded-full border-2 border-dashed flex items-center justify-center shrink-0">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-dashed">
               <UserPlus2 className="size-4" />
             </div>
-            <p className="flex-1 text-sm italic">Lugar disponible</p>
+            <p className="flex-1 text-sm italic">Cupo disponible</p>
           </li>
         ))}
       </ul>

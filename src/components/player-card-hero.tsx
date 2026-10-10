@@ -12,9 +12,12 @@ import type { TeamKey, TeamSlot } from '@/lib/teams'
 import { resolveAssetUrl } from '@/lib/assets'
 import { cn } from '@/lib/utils'
 
-// Duración del press-and-hold para revelar el hero.
-const PRESS_HOLD_MS = 5000
-// Movimiento en px que cancela el timer (para no interferir con drag).
+// Duración del press-and-hold para revelar el hero (táctil / mouse sostenido).
+// El drag táctil arranca a los 300ms (mobile-drag-drop); cualquier movimiento
+// >MOVE_THRESHOLD_PX cancela este timer, así que un hold quieto revela la foto
+// y un gesto de arrastre mueve la tarjeta.
+const PRESS_HOLD_MS = 600
+// Movimiento en px que cancela el timer (para no interferir con drag/scroll).
 const MOVE_THRESHOLD_PX = 10
 
 interface Props {
@@ -27,13 +30,18 @@ interface Props {
 }
 
 const TEAM_GLOW: Record<TeamKey, string> = {
-  A: 'shadow-[0_0_24px_-8px_rgba(132,204,22,0.5)]',
-  B: 'shadow-[0_0_24px_-8px_rgba(56,189,248,0.45)]',
+  A: 'group-hover:shadow-[0_0_34px_-12px_var(--team-a)]',
+  B: 'group-hover:shadow-[0_0_34px_-12px_var(--team-b)]',
+}
+
+const TEAM_RING: Record<TeamKey, string> = {
+  A: 'ring-team-a/30',
+  B: 'ring-team-b/30',
 }
 
 const TEAM_NUMBER: Record<TeamKey, string> = {
-  A: 'text-lime-300',
-  B: 'text-sky-300',
+  A: 'text-team-a',
+  B: 'text-team-b',
 }
 
 const CARD_TYPE = 'player-card'
@@ -97,6 +105,8 @@ function FilledPlayerCard({
   const [isOver, setIsOver] = useState(false)
   const { user } = registration
   const displayName = user.jerseyName || user.name.split(' ')[0].toUpperCase()
+  // Preferimos la foto de cuerpo entero; si no existe, el avatar; si no, iniciales.
+  const cardSrc = resolveAssetUrl(user.heroPhotoUrl) ?? resolveAssetUrl(user.photoUrl)
 
   useEffect(() => {
     const el = cardRef.current
@@ -137,7 +147,6 @@ function FilledPlayerCard({
         start = null
       }
     }
-    // Soltar / cancelar / salir: corta el timer y cierra el reveal si estaba activo.
     const release = () => {
       clearTimer()
       fireLeave()
@@ -255,40 +264,48 @@ function FilledPlayerCard({
       data-player-card
       style={{ transformStyle: 'preserve-3d', perspective: '800px' }}
       className={cn(
-        'group relative rounded-md overflow-hidden aspect-[3/4] bg-gradient-to-br from-emerald-950 via-emerald-900/40 to-emerald-950 ring-1 ring-emerald-500/15 will-change-transform transition-[box-shadow,opacity,transform] duration-200',
-        isCurrentUser && 'ring-2 ring-lime-300 shadow-[0_0_20px_-4px_rgba(190,242,100,0.6)]',
-        !isCurrentUser && !isOver && TEAM_GLOW[slot.team],
-        enableDnd && 'cursor-grab active:cursor-grabbing select-none [-webkit-touch-callout:none]',
+        'group relative aspect-[3/4] overflow-hidden rounded-xl bg-gradient-to-b from-pitch to-pitch-deep ring-1 transition-[box-shadow,opacity,transform] duration-200 will-change-transform',
+        TEAM_RING[slot.team],
+        TEAM_GLOW[slot.team],
+        isCurrentUser && 'ring-2 ring-team-a shadow-[0_0_24px_-6px_var(--team-a)]',
+        enableDnd && 'cursor-grab select-none active:cursor-grabbing [-webkit-touch-callout:none]',
         !enableDnd && 'select-none [-webkit-touch-callout:none]',
-        isDragging && 'opacity-40 scale-95',
+        isDragging && 'scale-95 opacity-40',
         isOver &&
-          'ring-2 ring-yellow-300 shadow-[0_0_30px_-2px_rgba(253,224,71,0.7)] scale-[1.03]',
+          'scale-[1.04] ring-2 ring-yellow-300 shadow-[0_0_34px_-4px_rgba(253,224,71,0.7)]',
       )}
     >
-      <div className="absolute inset-0 bg-radial-spotlight pointer-events-none" />
+      <div className="pointer-events-none absolute inset-0 bg-pitch-glow opacity-50" />
 
-      {user.photoUrl ? (
+      {cardSrc ? (
         <img
-          src={resolveAssetUrl(user.photoUrl)}
+          src={cardSrc}
           alt={displayName}
           loading="lazy"
+          decoding="async"
           draggable={false}
-          className="absolute inset-0 w-full h-full object-cover contrast-[1.1] [@media(hover:hover)]:grayscale [@media(hover:hover)]:mix-blend-luminosity group-hover:grayscale-0 group-hover:mix-blend-normal transition-all duration-300 pointer-events-none"
+          className="pointer-events-none absolute inset-0 size-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-graffiti text-5xl text-emerald-200/30 group-hover:text-emerald-200/50 transition-colors">
+          <span className={cn('font-display text-5xl opacity-50', TEAM_NUMBER[slot.team])}>
             {displayName.slice(0, 2)}
           </span>
         </div>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/70 to-transparent pointer-events-none" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/75 to-transparent" />
 
+      {/* Índice de cupo */}
+      <span className="absolute left-1.5 top-1.5 rounded bg-black/40 px-1.5 py-0.5 font-display text-[10px] tracking-widest text-white/60">
+        {String(slot.positionInTeam).padStart(2, '0')}
+      </span>
+
+      {/* Número */}
       {user.preferredNumber != null && (
         <span
           className={cn(
-            'absolute top-1.5 right-1.5 font-display text-2xl leading-none font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]',
+            'absolute right-1.5 top-1 font-display text-3xl font-bold leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]',
             TEAM_NUMBER[slot.team],
           )}
         >
@@ -296,42 +313,42 @@ function FilledPlayerCard({
         </span>
       )}
 
-      <span className="absolute top-1.5 left-1.5 text-[10px] font-display tracking-widest text-white/40">
-        {String(slot.positionInTeam).padStart(2, '0')}
-      </span>
-
+      {/* Handle de drag */}
       {enableDnd && (
         <span
-          className="absolute top-1.5 left-1/2 -translate-x-1/2 text-white/40 group-hover:text-white/80 transition-colors"
+          className="absolute left-1/2 top-1 -translate-x-1/2 text-white/40 transition-colors group-hover:text-white/80"
           aria-hidden
         >
-          <GripVertical className="size-3.5" />
+          <GripVertical className="size-4" />
         </span>
       )}
 
+      {/* Nombre de camiseta */}
       <div className="absolute inset-x-0 bottom-0 p-2 text-center">
-        <p
-          className={cn(
-            'font-graffiti text-base leading-tight drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)] truncate',
-            isCurrentUser ? 'text-lime-300' : 'text-white',
-          )}
-        >
+        <p className="truncate font-display text-lg leading-tight text-white text-shadow-hero">
           {displayName}
         </p>
         {isCurrentUser && (
-          <p className="text-[9px] font-display tracking-widest text-lime-300/80 mt-0.5">TÚ</p>
+          <span className="mt-0.5 inline-block rounded-full bg-team-a px-2 py-0.5 text-[9px] font-black tracking-widest text-team-a-foreground">
+            TÚ
+          </span>
         )}
       </div>
 
+      {/* Barra inferior del color del equipo */}
+      <span
+        className={cn(
+          'absolute inset-x-0 bottom-0 h-1',
+          slot.team === 'A' ? 'bg-team-a' : 'bg-team-b',
+        )}
+        aria-hidden
+      />
+
+      {/* Flash de llegada */}
       <div
         ref={flashRef}
-        className="absolute inset-0 pointer-events-none opacity-0"
-        style={{
-          background:
-            slot.team === 'A'
-              ? 'radial-gradient(circle at center, rgba(190,242,100,0.6) 0%, transparent 70%)'
-              : 'radial-gradient(circle at center, rgba(125,211,252,0.6) 0%, transparent 70%)',
-        }}
+        className="pointer-events-none absolute inset-0 bg-pitch-glow"
+        style={{ opacity: 0 }}
       />
     </article>
   )
@@ -360,25 +377,36 @@ function EmptyPlayerCard({ slot, enableDnd }: { slot: TeamSlot; enableDnd?: bool
     })
   }, [enableDnd, slot.position])
 
-  const accent = slot.team === 'A' ? 'text-lime-300/60' : 'text-sky-300/60'
+  const isTeamA = slot.team === 'A'
 
   return (
     <article
       ref={cardRef}
       data-player-card
       className={cn(
-        'relative rounded-md overflow-hidden aspect-[3/4] bg-gradient-to-br from-emerald-950/60 via-emerald-950/30 to-black/40 border border-dashed border-emerald-500/15 transition-all duration-200',
+        'relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-xl border border-dashed bg-white/[0.02] transition-all duration-200',
+        isTeamA ? 'border-team-a/25' : 'border-team-b/25',
         isOver &&
-          'border-yellow-300/80 bg-yellow-300/5 shadow-[0_0_30px_-2px_rgba(253,224,71,0.6)] scale-[1.03]',
+          'scale-[1.04] border-yellow-300/80 bg-yellow-300/5 shadow-[0_0_34px_-4px_rgba(253,224,71,0.55)]',
       )}
     >
-      <div className={cn('absolute inset-0 flex flex-col items-center justify-center gap-1.5', accent)}>
+      <div
+        className={cn(
+          'flex flex-col items-center justify-center gap-1.5',
+          isTeamA ? 'text-team-a/70' : 'text-team-b/70',
+        )}
+      >
         <UserPlus2 className="size-6" />
-        <span className="text-[10px] font-display tracking-widest">
-          {isOver ? 'SOLTAR AQUÍ' : 'LIBRE'}
+        <span className="font-display text-[11px] tracking-widest">
+          {isOver ? 'SOLTAR AQUÍ' : 'DISPONIBLE'}
         </span>
       </div>
-      <span className="absolute top-1.5 left-1.5 text-[10px] font-display tracking-widest text-emerald-200/30">
+      <span
+        className={cn(
+          'absolute left-1.5 top-1.5 font-display text-[10px] tracking-widest',
+          isTeamA ? 'text-team-a/40' : 'text-team-b/40',
+        )}
+      >
         {String(slot.positionInTeam).padStart(2, '0')}
       </span>
     </article>

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Calendar, Hash, MapPin, StickyNote } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -44,15 +44,16 @@ export function MatchForm({ initial, submitLabel, submitting, errorMessage, onSu
         notes: values.notes.trim() || undefined,
       })
     } catch {
-      // El error ya lo maneja quien dispara la mutación (toast + errorMessage);
-      // acá solo evitamos el rechazo sin capturar del promise.
+      // El error ya lo maneja quien dispara la mutación (toast + errorMessage).
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="place">Lugar</Label>
+        <Label htmlFor="place" className="flex items-center gap-1.5">
+          <MapPin className="size-3.5 text-primary" /> Lugar
+        </Label>
         <Input
           id="place"
           placeholder="Centro deportivo Laurita Vicuña"
@@ -64,9 +65,11 @@ export function MatchForm({ initial, submitLabel, submitting, errorMessage, onSu
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="dateTime">Fecha y hora</Label>
+          <Label htmlFor="dateTime" className="flex items-center gap-1.5">
+            <Calendar className="size-3.5 text-primary" /> Fecha y hora
+          </Label>
           <Input
             id="dateTime"
             type="datetime-local"
@@ -75,24 +78,30 @@ export function MatchForm({ initial, submitLabel, submitting, errorMessage, onSu
             onChange={(e) => setValues((v) => ({ ...v, dateTimeLocal: e.target.value }))}
             disabled={submitting}
           />
+          <p className="text-xs text-muted-foreground">En tu zona horaria local.</p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="requiredPlayers">Cupo de jugadores</Label>
+          <Label htmlFor="requiredPlayers" className="flex items-center gap-1.5">
+            <Hash className="size-3.5 text-primary" /> Cupos de jugadores
+          </Label>
           <Input
             id="requiredPlayers"
             type="number"
-            required
             min={2}
-            max={40}
+            max={99}
+            required
             value={values.requiredPlayers}
             onChange={(e) => setValues((v) => ({ ...v, requiredPlayers: Number(e.target.value) }))}
             disabled={submitting}
           />
+          <p className="text-xs text-muted-foreground">Capacidad total del partido (ej. 14).</p>
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Notas (opcional)</Label>
+        <Label htmlFor="notes" className="flex items-center gap-1.5">
+          <StickyNote className="size-3.5 text-primary" /> Notas (opcional)
+        </Label>
         <Textarea
           id="notes"
           placeholder="Traer pechera blanca, llegar 10 min antes…"
@@ -104,20 +113,14 @@ export function MatchForm({ initial, submitLabel, submitting, errorMessage, onSu
       </div>
 
       {errorMessage && (
-        <p className="text-sm text-destructive">
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
           {Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage}
         </p>
       )}
 
-      <div className="flex justify-end pt-2">
-        <Button type="submit" disabled={submitting} size="lg">
-          {submitting ? (
-            <>
-              <Loader2 className="animate-spin" /> Guardando…
-            </>
-          ) : (
-            submitLabel
-          )}
+      <div className="flex justify-end pt-1">
+        <Button type="submit" size="lg" loading={submitting} className="w-full sm:w-auto">
+          {submitting ? 'Guardando…' : submitLabel}
         </Button>
       </div>
     </form>

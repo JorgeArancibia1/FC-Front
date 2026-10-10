@@ -1,125 +1,426 @@
-import { useEffect, useRef, useState, type FormEvent, type InputHTMLAttributes } from 'react'
-import { AlertCircle, Eye, EyeOff, Loader2, Pencil, Trash2, X, ShieldCheck, ShieldHalf, User2, UserPlus } from 'lucide-react'
+import { useMemo, useState, type FormEvent, type InputHTMLAttributes } from 'react'
+import {
+  Eye,
+  EyeOff,
+  Pencil,
+  Trash2,
+  X,
+  ShieldCheck,
+  ShieldHalf,
+  UserRound,
+  UserPlus,
+  Search,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ui/page-header'
+import { EmptyState, ErrorState, PageLoader } from '@/components/ui/feedback'
+import { ModalBackdrop } from '@/components/ui/confirm-dialog'
 import { UserAvatar } from '@/components/user-avatar'
-import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from '@/lib/api-users'
 import { useCurrentUser } from '@/hooks/use-auth'
+import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from '@/lib/api-users'
+import { isAdmin } from '@/lib/roles'
 import { getApiErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 import type { AdminUser, CreateUserInput, UpdateUserInput } from '@/types/admin-user'
 import type { UserRole } from '@/types/auth'
 
 const ROLE_OPTIONS: { value: UserRole; label: string; icon: typeof ShieldCheck }[] = [
-  { value: 'admin', label: 'Admin', icon: ShieldCheck },
+  { value: 'admin', label: 'Administrador', icon: ShieldCheck },
   { value: 'supervisor', label: 'Supervisor', icon: ShieldHalf },
-  { value: 'usuario', label: 'Usuario', icon: User2 },
+  { value: 'usuario', label: 'Jugador', icon: UserRound },
 ]
 
-// Normaliza texto para comparar sin distinguir mayúsculas ni acentos.
+const ROLE_FILTERS: { value: UserRole | 'all'; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'admin', label: 'Admins' },
+  { value: 'supervisor', label: 'Supervisores' },
+  { value: 'usuario', label: 'Jugadores' },
+]
+
+const STATUS_FILTERS: { value: string; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'activo', label: 'Activos' },
+  { value: 'suspendido', label: 'Suspendidos' },
+  { value: 'eliminado', label: 'Eliminados' },
+]
+
 function normalizeText(value: string): string {
-  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
 }
 
 export default function AdminUsersList() {
   const { data, isPending, isError, error, refetch } = useUsers()
+  const currentUser = useCurrentUser()
+  const admin = isAdmin(currentUser)
+
+  const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<AdminUser | null>(null)
   const [deleting, setDeleting] = useState<AdminUser | null>(null)
-  const [creating, setCreating] = useState(false)
   const [search, setSearch] = useState('')
-  const currentUser = useCurrentUser()
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   const activeUsers = data?.filter((u) => u.status !== 'eliminado') ?? []
   const deletedCount = (data?.length ?? 0) - activeUsers.length
 
-  // Filtro en cliente: nombre, apellido o email sin distinguir mayúsculas ni acentos.
-  const query = normalizeText(search.trim())
-  const visibleUsers = query
-    ? (data ?? []).filter((u) =>
-        [u.name, u.lastName ?? '', u.email].some((field) => normalizeText(field).includes(query)),
-      )
-    : data ?? []
+  const visibleUsers = useMemo(() => {
+    const q = normalizeText(search)
+    return (data ?? []).filter((u) => {
+      if (roleFilter !== 'all' && !u.roles.includes(roleFilter)) return false
+      if (statusFilter !== 'all' && u.status !== statusFilter) return false
+      if (q) {
+        const haystack = normalizeText(`${u.name} ${u.lastName ?? ''} ${u.email}`)
+        if (!haystack.includes(q)) return false
+      }
+      return true
+    })
+  }, [data, search, roleFilter, statusFilter])
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold">Usuarios</h2>
-          <p className="text-sm text-muted-foreground">
-            {activeUsers.length} usuario{activeUsers.length === 1 ? '' : 's'} activo{activeUsers.length === 1 ? '' : 's'}
+    <div className="space-y-5">
+      <PageHeader
+        title="Usuarios"
+        description={
+          <>
+            {activeUsers.length} activo{activeUsers.length === 1 ? '' : 's'}
             {deletedCount > 0 && ` · ${deletedCount} eliminado${deletedCount === 1 ? '' : 's'}`}
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)}>
-          <UserPlus /> Nuevo
-        </Button>
-      </div>
-
-      <Input
-        type="search"
-        aria-label="Buscar usuarios"
-        placeholder="Buscar por nombre, apellido o email…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+          </>
+        }
+        actions={
+          admin ? (
+            <Button onClick={() => setCreating(true)}>
+              <UserPlus /> Nuevo usuario
+            </Button>
+          ) : undefined
+        }
       />
 
-      {isPending && (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin text-muted-foreground" />
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            aria-label="Buscar usuarios"
+            placeholder="Buscar por nombre, apellido o email…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
         </div>
-      )}
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <FilterChips
+            label="Rol"
+            options={ROLE_FILTERS}
+            value={roleFilter}
+            onChange={(v) => setRoleFilter(v as UserRole | 'all')}
+          />
+          <FilterChips label="Estado" options={STATUS_FILTERS} value={statusFilter} onChange={setStatusFilter} />
+        </div>
+      </div>
+
+      {isPending && <PageLoader label="Cargando usuarios…" />}
 
       {isError && (
-        <Card className="border-destructive/40">
-          <CardContent className="py-6 flex items-center gap-3 text-sm">
-            <AlertCircle className="size-5 text-destructive shrink-0" />
-            <div className="flex-1">
-              <p className="font-medium">No se pudieron cargar los usuarios.</p>
-              <p className="text-muted-foreground">{(error as Error)?.message}</p>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => refetch()}>
-              Reintentar
-            </Button>
-          </CardContent>
-        </Card>
+        <ErrorState
+          title="No se pudieron cargar los usuarios"
+          description={getApiErrorMessage(error)}
+          onRetry={() => refetch()}
+        />
       )}
 
       {data && data.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            Aún no hay usuarios.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={UserPlus}
+          title="Aún no hay usuarios"
+          description="Crea el primer usuario para que pueda inscribirse a los partidos."
+          action={
+            admin ? (
+              <Button onClick={() => setCreating(true)}>
+                <UserPlus /> Crear usuario
+              </Button>
+            ) : undefined
+          }
+        />
       )}
 
       {data && data.length > 0 && visibleUsers.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            Ningún usuario coincide con la búsqueda.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Search}
+          title="Sin resultados"
+          description="Ningún usuario coincide con la búsqueda o los filtros seleccionados."
+        />
       )}
 
       {visibleUsers.length > 0 && (
-        <div className="grid gap-2">
-          {visibleUsers.map((u) => (
-            <UserRow
-              key={u.id}
-              user={u}
-              isSelf={currentUser?.id === u.id}
-              onEdit={() => setEditing(u)}
-              onDelete={() => setDeleting(u)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="hidden overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm md:block">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                  <th className="px-4 py-3 font-semibold">Usuario</th>
+                  <th className="px-4 py-3 font-semibold">Rol</th>
+                  <th className="px-4 py-3 font-semibold">Estado</th>
+                  {admin && <th className="px-4 py-3 text-right font-semibold">Acciones</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {visibleUsers.map((u) => (
+                  <UserTableRow
+                    key={u.id}
+                    user={u}
+                    isSelf={currentUser?.id === u.id}
+                    admin={admin}
+                    onEdit={() => setEditing(u)}
+                    onDelete={() => setDeleting(u)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="grid gap-2 md:hidden">
+            {visibleUsers.map((u) => (
+              <UserCard
+                key={u.id}
+                user={u}
+                isSelf={currentUser?.id === u.id}
+                admin={admin}
+                onEdit={() => setEditing(u)}
+                onDelete={() => setDeleting(u)}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {creating && <CreateUserModal onClose={() => setCreating(false)} />}
       {editing && <EditUserModal user={editing} onClose={() => setEditing(null)} />}
       {deleting && <DeleteUserModal user={deleting} onClose={() => setDeleting(null)} />}
+    </div>
+  )
+}
+
+function FilterChips({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: { value: string; label: string }[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={cn(
+              'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
+              value === o.value
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground',
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function RoleBadge({ role }: { role: UserRole }) {
+  const styles: Record<UserRole, string> = {
+    admin: 'bg-amber-500/15 text-amber-700 ring-amber-500/30 dark:text-amber-300',
+    supervisor: 'bg-team-b/15 text-team-b ring-team-b/30',
+    usuario: 'bg-slate-500/15 text-slate-700 ring-slate-500/30 dark:text-slate-300',
+  }
+  const labels: Record<UserRole, string> = {
+    admin: 'Admin',
+    supervisor: 'Supervisor',
+    usuario: 'Jugador',
+  }
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset',
+        styles[role],
+      )}
+    >
+      {labels[role]}
+    </span>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    activo: 'bg-emerald-500/15 text-emerald-700 ring-emerald-500/30 dark:text-emerald-300',
+    suspendido: 'bg-amber-500/15 text-amber-700 ring-amber-500/30 dark:text-amber-300',
+    eliminado: 'bg-red-500/15 text-red-700 ring-red-500/30 dark:text-red-300',
+  }
+  const label = status.charAt(0).toUpperCase() + status.slice(1)
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset',
+        styles[status] ?? styles.activo,
+      )}
+    >
+      {label}
+    </span>
+  )
+}
+
+function UserTableRow({
+  user,
+  isSelf,
+  admin,
+  onEdit,
+  onDelete,
+}: {
+  user: AdminUser
+  isSelf: boolean
+  admin: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const isDeleted = user.status === 'eliminado'
+  return (
+    <tr className={cn('border-b transition-colors last:border-0 hover:bg-accent/40', isDeleted && 'opacity-50')}>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <UserAvatar
+            photoUrl={user.photoUrl}
+            name={user.name}
+            className="size-10 rounded-full"
+            fallbackClassName="bg-primary/10 text-primary text-sm"
+          />
+          <div className="min-w-0">
+            <p className="truncate font-medium">
+              {user.name} {user.lastName ?? ''}
+              {isSelf && <span className="ml-2 text-xs text-muted-foreground">(tú)</span>}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex flex-wrap gap-1">
+          {user.roles.map((r) => (
+            <RoleBadge key={r} role={r} />
+          ))}
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <StatusBadge status={user.status} />
+      </td>
+      {admin && (
+        <td className="px-4 py-3">
+          <div className="flex justify-end gap-1">
+            <Button size="iconSm" variant="ghost" onClick={onEdit} disabled={isDeleted} title="Editar">
+              <Pencil />
+            </Button>
+            <Button
+              size="iconSm"
+              variant="ghost"
+              onClick={onDelete}
+              disabled={isSelf || isDeleted}
+              title={isSelf ? 'No puedes eliminarte' : 'Eliminar'}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 />
+            </Button>
+          </div>
+        </td>
+      )}
+    </tr>
+  )
+}
+
+function UserCard({
+  user,
+  isSelf,
+  admin,
+  onEdit,
+  onDelete,
+}: {
+  user: AdminUser
+  isSelf: boolean
+  admin: boolean
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const isDeleted = user.status === 'eliminado'
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-3 rounded-xl border border-border/70 bg-card p-4 shadow-sm',
+        isDeleted && 'opacity-50',
+      )}
+    >
+      <UserAvatar
+        photoUrl={user.photoUrl}
+        name={user.name}
+        className="size-11 rounded-full"
+        fallbackClassName="bg-primary/10 text-primary text-sm"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate font-medium">
+            {user.name} {user.lastName ?? ''}
+            {isSelf && <span className="ml-2 text-xs text-muted-foreground">(tú)</span>}
+          </p>
+          <StatusBadge status={user.status} />
+        </div>
+        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {user.roles.map((r) => (
+            <RoleBadge key={r} role={r} />
+          ))}
+        </div>
+      </div>
+      {admin && (
+        <div className="flex shrink-0 gap-1">
+          <Button size="icon" variant="ghost" onClick={onEdit} disabled={isDeleted} title="Editar">
+            <Pencil />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onDelete}
+            disabled={isSelf || isDeleted}
+            title={isSelf ? 'No puedes eliminarte' : 'Eliminar'}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 />
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ModalCard({ children, titleId }: { children: React.ReactNode; titleId: string }) {
+  return (
+    <div
+      role="document"
+      aria-labelledby={titleId}
+      className="w-full max-w-md rounded-2xl bg-card p-6 text-card-foreground shadow-2xl animate-in slide-in-from-bottom-4 duration-200"
+    >
+      {children}
     </div>
   )
 }
@@ -139,13 +440,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    const input: CreateUserInput = {
-      name,
-      lastName: lastName || undefined,
-      email,
-      password,
-      roles,
-    }
+    const input: CreateUserInput = { name, lastName: lastName || undefined, email, password, roles }
     try {
       await create.mutateAsync(input)
       toast.success('Usuario creado')
@@ -155,23 +450,26 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  // Error inline (además del toast): null mientras no haya error.
   const errorMessage = create.error ? getApiErrorMessage(create.error) : null
 
   return (
     <ModalBackdrop onClose={onClose} titleId="create-user-title">
-      <div className="w-full max-w-md rounded-2xl bg-card text-card-foreground shadow-2xl p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-200">
+      <ModalCard titleId="create-user-title">
         <header className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="create-user-title" className="font-bold">Nuevo usuario</h2>
-            <p className="text-xs text-muted-foreground">El usuario podrá iniciar sesión con la contraseña que ingreses.</p>
+            <h2 id="create-user-title" className="font-bold">
+              Nuevo usuario
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              El usuario podrá iniciar sesión con la contraseña que ingreses.
+            </p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Cerrar" className="-mr-2 -mt-2">
             <X />
           </Button>
         </header>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="new-name">Nombre</Label>
@@ -207,33 +505,12 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
               minLength={8}
               placeholder="Min 8, mayús+minús+número+símbolo"
             />
-            <p className="text-xs text-muted-foreground">Mostramos en claro para que la copies y se la pases al usuario.</p>
+            <p className="text-xs text-muted-foreground">
+              Mostramos en claro para que la copies y se la pases al usuario.
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label>Roles</Label>
-            <div className="flex gap-2 flex-wrap">
-              {ROLE_OPTIONS.map(({ value, label, icon: Icon }) => {
-                const active = roles.includes(value)
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => toggleRole(value)}
-                    aria-pressed={active}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold ring-1 ring-inset transition',
-                      active
-                        ? 'bg-primary text-primary-foreground ring-primary'
-                        : 'bg-muted text-muted-foreground ring-border hover:bg-muted/70',
-                    )}
-                  >
-                    <Icon className="size-3.5" /> {label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <RoleSelector roles={roles} onToggle={toggleRole} />
 
           {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
 
@@ -241,113 +518,13 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancelar
             </Button>
-            <Button type="submit" disabled={create.isPending || roles.length === 0} className="flex-1">
-              {create.isPending && <Loader2 className="animate-spin" />} Crear
+            <Button type="submit" disabled={roles.length === 0} loading={create.isPending} className="flex-1">
+              Crear
             </Button>
           </div>
         </form>
-      </div>
+      </ModalCard>
     </ModalBackdrop>
-  )
-}
-
-function UserRow({
-  user,
-  isSelf,
-  onEdit,
-  onDelete,
-}: {
-  user: AdminUser
-  isSelf: boolean
-  onEdit: () => void
-  onDelete: () => void
-}) {
-  const isDeleted = user.status === 'eliminado'
-  return (
-    <Card className={cn(isDeleted && 'opacity-50')}>
-      <CardContent className="p-4 flex items-center gap-3">
-        <UserAvatar
-          photoUrl={user.photoUrl}
-          name={user.name}
-          className="size-11"
-          fallbackClassName="bg-primary/10 text-primary text-sm"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-medium truncate">
-              {user.name}
-              {user.lastName ? ` ${user.lastName}` : ''}
-              {isSelf && <span className="ml-2 text-xs text-muted-foreground">(tú)</span>}
-            </p>
-            <StatusBadge status={user.status} />
-          </div>
-          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {user.roles.map((r) => (
-              <RoleBadge key={r} role={r} />
-            ))}
-          </div>
-        </div>
-        <div className="flex gap-1 shrink-0">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onEdit}
-            disabled={isDeleted}
-            title="Editar"
-          >
-            <Pencil />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onDelete}
-            disabled={isSelf || isDeleted}
-            title={isSelf ? 'No puedes eliminarte' : 'Eliminar'}
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function RoleBadge({ role }: { role: UserRole }) {
-  const styles: Record<UserRole, string> = {
-    admin: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-amber-500/30',
-    supervisor: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 ring-blue-500/30',
-    usuario: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 ring-slate-500/30',
-  }
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ring-1 ring-inset uppercase tracking-wide',
-        styles[role],
-      )}
-    >
-      {role}
-    </span>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    activo: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/30',
-    suspendido: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 ring-yellow-500/30',
-    eliminado: 'bg-red-500/15 text-red-700 dark:text-red-300 ring-red-500/30',
-  }
-  const label = status.charAt(0).toUpperCase() + status.slice(1)
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ring-1 ring-inset',
-        styles[status] ?? styles.activo,
-      )}
-    >
-      {label}
-    </span>
   )
 }
 
@@ -386,23 +563,24 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
     }
   }
 
-  // Error inline (además del toast): null mientras no haya error.
   const errorMessage = update.error ? getApiErrorMessage(update.error) : null
 
   return (
     <ModalBackdrop onClose={onClose} titleId="edit-user-title">
-      <div className="w-full max-w-md rounded-2xl bg-card text-card-foreground shadow-2xl p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-200">
+      <ModalCard titleId="edit-user-title">
         <header className="flex items-start justify-between gap-3">
           <div>
-            <h2 id="edit-user-title" className="font-bold">Editar usuario</h2>
-            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            <h2 id="edit-user-title" className="font-bold">
+              Editar usuario
+            </h2>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} aria-label="Cerrar" className="-mr-2 -mt-2">
             <X />
           </Button>
         </header>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre</Label>
@@ -414,34 +592,7 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Roles</Label>
-            <div className="flex gap-2 flex-wrap">
-              {ROLE_OPTIONS.map(({ value, label, icon: Icon }) => {
-                const active = roles.includes(value)
-                const disabled = isSelf && value === 'admin' && active
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => !disabled && toggleRole(value)}
-                    disabled={disabled}
-                    aria-pressed={active}
-                    title={disabled ? 'No puedes quitarte el rol admin' : ''}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold ring-1 ring-inset transition',
-                      active
-                        ? 'bg-primary text-primary-foreground ring-primary'
-                        : 'bg-muted text-muted-foreground ring-border hover:bg-muted/70',
-                      disabled && 'opacity-60 cursor-not-allowed',
-                    )}
-                  >
-                    <Icon className="size-3.5" /> {label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <RoleSelector roles={roles} onToggle={toggleRole} isSelf={isSelf} />
 
           <div className="space-y-2">
             <Label>Estado</Label>
@@ -452,7 +603,7 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
                   type="button"
                   onClick={() => setStatus(s)}
                   className={cn(
-                    'flex-1 px-3 py-2 rounded-md text-sm font-medium ring-1 ring-inset transition',
+                    'flex-1 rounded-md px-3 py-2 text-sm font-medium ring-1 ring-inset transition',
                     status === s
                       ? 'bg-primary text-primary-foreground ring-primary'
                       : 'bg-muted text-muted-foreground ring-border hover:bg-muted/70',
@@ -466,7 +617,7 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
 
           <div className="space-y-2 border-t pt-4">
             <Label htmlFor="edit-new-password">
-              Nueva contraseña <span className="text-muted-foreground font-normal">(opcional)</span>
+              Nueva contraseña <span className="font-normal text-muted-foreground">(opcional)</span>
             </Label>
             <PasswordInput
               id="edit-new-password"
@@ -477,7 +628,8 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
               minLength={newPassword ? 8 : undefined}
             />
             <p className="text-xs text-muted-foreground">
-              Si la cambiás, las sesiones activas del usuario quedan deslogueadas. Pasale la nueva contraseña por un canal seguro.
+              Si la cambiás, las sesiones activas del usuario quedan deslogueadas. Pasale la nueva
+              contraseña por un canal seguro.
             </p>
           </div>
 
@@ -487,13 +639,54 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancelar
             </Button>
-            <Button type="submit" disabled={update.isPending || roles.length === 0} className="flex-1">
-              {update.isPending && <Loader2 className="animate-spin" />} Guardar
+            <Button type="submit" disabled={roles.length === 0} loading={update.isPending} className="flex-1">
+              Guardar
             </Button>
           </div>
         </form>
-      </div>
+      </ModalCard>
     </ModalBackdrop>
+  )
+}
+
+function RoleSelector({
+  roles,
+  onToggle,
+  isSelf,
+}: {
+  roles: UserRole[]
+  onToggle: (role: UserRole) => void
+  isSelf?: boolean
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>Roles</Label>
+      <div className="flex flex-wrap gap-2">
+        {ROLE_OPTIONS.map(({ value, label, icon: Icon }) => {
+          const active = roles.includes(value)
+          const disabled = !!isSelf && value === 'admin' && active
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => !disabled && onToggle(value)}
+              disabled={disabled}
+              aria-pressed={active}
+              title={disabled ? 'No puedes quitarte el rol admin' : undefined}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold ring-1 ring-inset transition',
+                active
+                  ? 'bg-primary text-primary-foreground ring-primary'
+                  : 'bg-muted text-muted-foreground ring-border hover:bg-muted/70',
+                disabled && 'cursor-not-allowed opacity-60',
+              )}
+            >
+              <Icon className="size-3.5" /> {label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -510,95 +703,49 @@ function DeleteUserModal({ user, onClose }: { user: AdminUser; onClose: () => vo
     }
   }
 
-  // Error inline (además del toast): null mientras no haya error.
   const errorMessage = del.error ? getApiErrorMessage(del.error) : null
 
   return (
     <ModalBackdrop onClose={onClose} titleId="delete-user-title">
-      <div className="w-full max-w-md rounded-2xl bg-card text-card-foreground shadow-2xl p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-200">
+      <ModalCard titleId="delete-user-title">
         <header className="flex items-start gap-3">
-          <div className="size-10 rounded-full bg-destructive/15 text-destructive flex items-center justify-center shrink-0">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive">
             <Trash2 className="size-5" />
           </div>
           <div className="flex-1">
-            <h2 id="delete-user-title" className="font-bold">Eliminar usuario</h2>
+            <h2 id="delete-user-title" className="font-bold">
+              Eliminar usuario
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Esta acción marca al usuario como eliminado y revoca sus sesiones. Sus inscripciones a partidos quedan en
-              la base de datos pero no podrá volver a iniciar sesión.
+              Esta acción marca al usuario como eliminado y revoca sus sesiones. Sus inscripciones a
+              partidos quedan en la base de datos pero no podrá volver a iniciar sesión.
             </p>
           </div>
         </header>
 
-        <div className="rounded-lg bg-muted p-3 text-sm">
-          <p className="font-medium">{user.name}{user.lastName ? ` ${user.lastName}` : ''}</p>
-          <p className="text-muted-foreground text-xs">{user.email}</p>
+        <div className="mt-4 rounded-lg bg-muted p-3 text-sm">
+          <p className="font-medium">
+            {user.name}
+            {user.lastName ? ` ${user.lastName}` : ''}
+          </p>
+          <p className="text-xs text-muted-foreground">{user.email}</p>
         </div>
 
-        {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+        {errorMessage && <p className="mt-3 text-sm text-destructive">{errorMessage}</p>}
 
-        <div className="flex gap-2">
+        <div className="mt-4 flex gap-2">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={del.isPending} className="flex-1">
-            {del.isPending && <Loader2 className="animate-spin" />} Eliminar
+          <Button variant="destructive" onClick={handleDelete} loading={del.isPending} className="flex-1">
+            Eliminar
           </Button>
         </div>
-      </div>
+      </ModalCard>
     </ModalBackdrop>
   )
 }
 
-function ModalBackdrop({
-  children,
-  onClose,
-  titleId,
-}: {
-  children: React.ReactNode
-  onClose: () => void
-  // Id del <h2> del título: el diálogo se labela con él (aria-labelledby).
-  titleId: string
-}) {
-  const dialogRef = useRef<HTMLDivElement>(null)
-
-  // Escape cierra el modal. El componente solo monta cuando el modal está
-  // abierto, así que el cleanup se lleva el listener al cerrar.
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
-  // Foco inicial: primer input del formulario, o el primer botón (cerrar/cancelar).
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-    const target = dialog.querySelector<HTMLElement>('input') ?? dialog.querySelector<HTMLElement>('button')
-    target?.focus()
-  }, [])
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150"
-      onClick={onClose}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md"
-      >
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// Input de contraseña con botón de visibilidad (eye/eye-off).
 function PasswordInput(props: InputHTMLAttributes<HTMLInputElement>) {
   const [visible, setVisible] = useState(false)
   return (

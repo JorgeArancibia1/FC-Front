@@ -8,6 +8,7 @@ import type {
   CreateMatchInput,
   MatchDetail,
   MatchListItem,
+  MatchStatus,
   UpdateMatchInput,
 } from '@/types/match'
 
@@ -91,6 +92,20 @@ export function useDeleteMatch() {
     mutationFn: async (id: string) => {
       await api.delete(`/matches/${id}`)
       return id
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.all })
+    },
+  })
+}
+
+// Cambia solo el estado de un partido desde el listado (Admin/Supervisor).
+export function useSetMatchStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: MatchStatus }) => {
+      const { data } = await api.patch<MatchDetail>(`/matches/${id}`, { status })
+      return data
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.all })

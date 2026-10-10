@@ -1,8 +1,22 @@
 import { useEffect } from 'react'
-import { LogOut, MapPin, Clock, Users, Loader2, Wifi, WifiOff, TriangleAlert, Calendar, UserCircle2, LayoutDashboard } from 'lucide-react'
+import {
+  LogOut,
+  MapPin,
+  Clock,
+  Users,
+  Loader2,
+  Wifi,
+  WifiOff,
+  TriangleAlert,
+  Calendar,
+  UserCircle2,
+  LayoutDashboard,
+  Trophy,
+  StickyNote,
+} from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { InstallButton } from '@/components/install-button'
 import { MatchEnrollButton } from '@/components/match-enroll-button'
 import { MatchHeroBoard } from '@/components/match-hero-board'
@@ -13,8 +27,11 @@ import { useMatchRealtime, type RealtimeStatus } from '@/hooks/use-match-realtim
 import { useThemeColor } from '@/hooks/use-theme-color'
 import { useActiveMatch } from '@/lib/api-matches'
 import { useProfile } from '@/lib/api-profile'
+import { isManager } from '@/lib/roles'
 import { formatMatchDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
+
+const PITCH_DEEP = '#050d09'
 
 export default function PartidoActivo() {
   const user = useCurrentUser()
@@ -23,19 +40,17 @@ export default function PartidoActivo() {
   const navigate = useNavigate()
   const { data: match, isPending, isError, error, refetch } = useActiveMatch()
   const realtimeStatus = useMatchRealtime(match?.id)
-  const isAdmin = user?.roles.some((r) => r === 'admin' || r === 'supervisor') ?? false
+  const manager = isManager(user)
 
-  // Status bar Android (PWA standalone) toma el color del header oscuro.
-  useThemeColor('#050d09')
+  useThemeColor(PITCH_DEEP)
 
-  // Pintamos html+body con el mismo verde oscuro del pitch para que el
-  // overscroll de iOS Safari (cuando el contenido es más corto que la vista
-  // o al hacer bounce) no muestre el blanco del body. Limpiamos al desmontar.
+  // Pintamos html+body con el verde oscuro del pitch para que el overscroll de
+  // iOS Safari no muestre el blanco del body. Limpiamos al desmontar.
   useEffect(() => {
     const prevHtml = document.documentElement.style.backgroundColor
     const prevBody = document.body.style.backgroundColor
-    document.documentElement.style.backgroundColor = '#050d09'
-    document.body.style.backgroundColor = '#050d09'
+    document.documentElement.style.backgroundColor = PITCH_DEEP
+    document.body.style.backgroundColor = PITCH_DEEP
     return () => {
       document.documentElement.style.backgroundColor = prevHtml
       document.body.style.backgroundColor = prevBody
@@ -49,21 +64,20 @@ export default function PartidoActivo() {
 
   return (
     <div className="dark min-h-svh bg-pitch-vignette text-foreground">
-      <header className="border-b border-emerald-500/15 bg-black/40 backdrop-blur-md sticky top-0 z-20 pt-[env(safe-area-inset-top)]">
-        {/* flex-wrap: a 320-360px el avatar + 4 botones no entran en una sola fila */}
-        <div className="mx-auto max-w-3xl px-4 py-4 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-black/40 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-2 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
             <UserAvatar
               photoUrl={profile?.photoUrl}
               name={profile?.name ?? user?.name}
-              className="size-10"
-              fallbackClassName="bg-lime-300/15 ring-1 ring-lime-300/30 text-lime-300 text-sm"
+              className="size-10 rounded-xl"
+              fallbackClassName="bg-team-a/15 text-team-a ring-1 ring-team-a/30 text-sm"
             />
             <div className="min-w-0">
-              <h1 className="text-lg font-bold leading-tight truncate text-white">
+              <h1 className="truncate font-display text-2xl leading-none text-white">
                 Próximo partido
               </h1>
-              <p className="text-xs text-emerald-200/70 truncate">Hola, {user?.name}</p>
+              <p className="truncate text-xs text-emerald-100/70">Hola, {user?.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -71,14 +85,14 @@ export default function PartidoActivo() {
             <InstallButton
               variant="ghost"
               iconOnlyOnMobile
-              className="text-emerald-100 hover:bg-emerald-500/10 hover:text-white border-emerald-400/30"
+              className="border-team-a/30 text-emerald-50 hover:bg-team-a/10 hover:text-white"
             />
-            {isAdmin && (
+            {manager && (
               <Button
                 asChild
                 variant="ghost"
                 size="sm"
-                className="text-emerald-100 hover:bg-emerald-500/10 hover:text-white"
+                className="text-emerald-50 hover:bg-team-a/10 hover:text-white"
               >
                 <Link to="/admin" title="Volver al panel admin" aria-label="Volver al panel admin">
                   <LayoutDashboard /> <span className="hidden sm:inline">Panel</span>
@@ -89,7 +103,7 @@ export default function PartidoActivo() {
               asChild
               variant="ghost"
               size="sm"
-              className="text-emerald-100 hover:bg-emerald-500/10 hover:text-white"
+              className="text-emerald-50 hover:bg-team-a/10 hover:text-white"
             >
               <Link to="/perfil" aria-label="Mi perfil">
                 <UserCircle2 /> <span className="hidden sm:inline">Perfil</span>
@@ -100,7 +114,7 @@ export default function PartidoActivo() {
               size="sm"
               onClick={handleLogout}
               aria-label="Cerrar sesión"
-              className="text-emerald-100 hover:bg-emerald-500/10 hover:text-white"
+              className="text-emerald-50 hover:bg-team-a/10 hover:text-white"
             >
               <LogOut /> <span className="hidden sm:inline">Salir</span>
             </Button>
@@ -108,34 +122,34 @@ export default function PartidoActivo() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+      <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
         {isPending && (
           <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-emerald-300" />
+            <Loader2 className="size-7 animate-spin text-team-a" />
           </div>
         )}
 
         {isError && (
-          <Card className="border-destructive/40 bg-black/40 backdrop-blur">
-            <CardContent className="py-6 space-y-3 text-sm">
-              <p className="font-medium text-white">No pudimos cargar los partidos.</p>
-              <p className="text-emerald-200/70">{(error as Error)?.message}</p>
-              <Button size="sm" variant="outline" onClick={() => refetch()}>
+          <Card className="border-destructive/30 bg-black/40 backdrop-blur">
+            <CardContent className="space-y-3 py-6 text-sm">
+              <p className="font-semibold text-white">No se pudo cargar el partido.</p>
+              <p className="text-emerald-100/70">{(error as Error)?.message}</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
                 Reintentar
               </Button>
             </CardContent>
           </Card>
         )}
 
-        {!isPending && !match && (
-          <Card className="bg-black/40 backdrop-blur border-emerald-500/20">
-            <CardContent className="py-12 text-center space-y-3">
-              <div className="mx-auto size-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <Calendar className="size-6 text-emerald-300" />
+        {!isPending && !isError && !match && (
+          <Card className="border-white/10 bg-black/40 backdrop-blur">
+            <CardContent className="space-y-3 py-14 text-center">
+              <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-team-a/10 text-team-a">
+                <Calendar className="size-7" />
               </div>
               <div>
-                <p className="font-medium text-white">No hay partidos programados</p>
-                <p className="text-sm text-emerald-200/70">
+                <p className="font-semibold text-white">No hay partidos programados</p>
+                <p className="text-sm text-emerald-100/70">
                   Cuando el admin cree un partido aparecerá aquí.
                 </p>
               </div>
@@ -144,14 +158,18 @@ export default function PartidoActivo() {
         )}
 
         {match && (
-          <Card className="overflow-hidden bg-black/40 backdrop-blur border-emerald-500/20">
-            <div className="h-2 bg-gradient-to-r from-lime-400 via-lime-300 to-lime-400" />
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2 flex-wrap">
-                <CardTitle className="text-xl text-white">{match.place}</CardTitle>
+          <Card className="overflow-hidden border-team-a/20 bg-black/40 backdrop-blur">
+            <div className="h-1.5 bg-gradient-to-r from-team-a via-white/70 to-team-b" />
+            <CardContent className="space-y-4 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-xl font-black text-white">
+                  <Trophy className="size-5 text-team-a" />
+                  <span className="truncate">{match.place}</span>
+                </h2>
                 <MatchStatusBadge status={match.status} />
               </div>
-              <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-emerald-200/80 pt-2">
+
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-emerald-100/80">
                 <span className="inline-flex items-center gap-1.5">
                   <Clock className="size-4" /> {formatMatchDate(match.dateTime)}
                 </span>
@@ -163,21 +181,32 @@ export default function PartidoActivo() {
                   {match.registrations.length} / {match.requiredPlayers} jugadores
                 </span>
               </div>
+
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-team-a to-team-b transition-[width] duration-500"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (match.registrations.length / match.requiredPlayers) * 100,
+                    )}%`,
+                  }}
+                />
+              </div>
+
               {match.notes && (
-                <p className="text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-md p-3 mt-3 text-emerald-50">
+                <p className="flex items-start gap-2 rounded-lg border border-team-a/20 bg-team-a/10 p-3 text-sm text-emerald-50">
+                  <StickyNote className="mt-0.5 size-4 shrink-0 text-team-a" />
                   {match.notes}
                 </p>
               )}
-            </CardHeader>
-            <CardContent>
+
               <MatchEnrollButton match={match} />
             </CardContent>
           </Card>
         )}
 
-        {match && (
-          <MatchHeroBoard match={match} currentUserId={user?.id} canReorder={isAdmin} />
-        )}
+        {match && <MatchHeroBoard match={match} currentUserId={user?.id} canReorder={manager} />}
       </main>
     </div>
   )
@@ -195,18 +224,16 @@ function RealtimeIndicator({
     connecting: {
       Icon: Loader2,
       label: 'Conectando',
-      className: 'text-muted-foreground animate-spin',
+      className: 'text-emerald-100/70 animate-spin',
     },
-    connected: { Icon: Wifi, label: '', className: 'text-primary' },
+    connected: { Icon: Wifi, label: '', className: 'text-team-a' },
     disconnected: { Icon: WifiOff, label: 'Desconectado', className: 'text-destructive' },
     error: { Icon: TriangleAlert, label: 'Error de conexión', className: 'text-destructive' },
   }[status]
-  // En móvil (mobile-first) el header va apretado: sólo icono; el estado va en
-  // title/aria-label. El texto se muestra a partir de sm si hay lugar.
   const text = config.label || 'Conectado'
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-xs text-emerald-200/70"
+      className="inline-flex items-center gap-1.5 text-xs text-emerald-100/70"
       role="status"
       title={`Realtime: ${text}`}
       aria-label={`Realtime: ${text}`}

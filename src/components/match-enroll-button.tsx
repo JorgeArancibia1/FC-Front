@@ -1,6 +1,8 @@
-import { CheckCircle2, Loader2, UserMinus, UserPlus } from 'lucide-react'
+import { useState } from 'react'
+import { CheckCircle2, UserMinus, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useCurrentUser } from '@/hooks/use-auth'
 import { useRegisterToMatch, useUnregisterFromMatch } from '@/lib/api-matches'
 import { getApiErrorMessage } from '@/lib/errors'
@@ -14,6 +16,7 @@ export function MatchEnrollButton({ match }: Props) {
   const user = useCurrentUser()
   const register = useRegisterToMatch(match.id)
   const unregister = useUnregisterFromMatch(match.id)
+  const [confirmUnregister, setConfirmUnregister] = useState(false)
 
   if (!user) return null
 
@@ -30,9 +33,11 @@ export function MatchEnrollButton({ match }: Props) {
   }
 
   function handleUnregister() {
-    if (!window.confirm('¿Desinscribirte del partido?')) return
     unregister.mutate(undefined, {
-      onSuccess: () => toast.success('Te desinscribiste del partido'),
+      onSuccess: () => {
+        toast.success('Te desinscribiste del partido')
+        setConfirmUnregister(false)
+      },
       onError: (err) => toast.error(getApiErrorMessage(err)),
     })
   }
@@ -42,36 +47,48 @@ export function MatchEnrollButton({ match }: Props) {
 
   if (myReg) {
     return (
-      <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
-        <div className="flex items-center gap-2 text-sm font-medium text-primary">
+      <div className="space-y-3 rounded-xl border border-team-a/30 bg-team-a/10 p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-team-a">
           <CheckCircle2 className="size-5" /> Estás inscrito en este partido
         </div>
         <Button
           variant="outline"
           className="w-full"
-          disabled={unregister.isPending}
-          onClick={handleUnregister}
+          loading={unregister.isPending}
+          onClick={() => setConfirmUnregister(true)}
         >
-          {unregister.isPending ? <Loader2 className="animate-spin" /> : <UserMinus />}
-          Retirarme
+          {!unregister.isPending && <UserMinus />}
+          {unregister.isPending ? 'Saliendo…' : 'Desinscribirme'}
         </Button>
-        {mutationError && <p className="text-sm text-destructive">{mutationError}</p>}
+        {mutationError && <p className="text-center text-sm text-destructive">{mutationError}</p>}
+
+        <ConfirmDialog
+          open={confirmUnregister}
+          title="¿Desinscribirte del partido?"
+          description="Se liberará tu cupo en la plantilla. Podrás volver a inscribirte si hay lugar."
+          confirmLabel="Sí, desinscribirme"
+          cancelLabel="Cancelar"
+          destructive
+          loading={unregister.isPending}
+          onConfirm={handleUnregister}
+          onCancel={() => setConfirmUnregister(false)}
+        />
       </div>
     )
   }
 
   if (!isOpen) {
     return (
-      <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground text-center">
-        El partido no está aceptando inscripciones.
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-emerald-100/70">
+        Las inscripciones para este partido están cerradas.
       </div>
     )
   }
 
   if (isFull) {
     return (
-      <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground text-center">
-        Cupo lleno. No puedes inscribirte.
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-emerald-100/70">
+        El cupo está completo.
       </div>
     )
   }
@@ -81,14 +98,14 @@ export function MatchEnrollButton({ match }: Props) {
       <Button
         size="lg"
         className="w-full"
-        disabled={register.isPending}
+        loading={register.isPending}
         onClick={handleRegister}
       >
-        {register.isPending ? <Loader2 className="animate-spin" /> : <UserPlus />}
-        Inscribirme al partido
+        {!register.isPending && <UserPlus />}
+        {register.isPending ? 'Inscribiendo…' : 'Inscribirme al partido'}
       </Button>
       {mutationError && (
-        <p className="text-sm text-destructive text-center">{mutationError}</p>
+        <p className="text-center text-sm text-destructive">{mutationError}</p>
       )}
     </div>
   )

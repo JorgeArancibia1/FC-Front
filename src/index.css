@@ -4,12 +4,19 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Tipografía */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Bebas Neue", ui-sans-serif, system-ui, sans-serif;
+
+  /* Superficies */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
+  /* Marca */
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -20,87 +27,268 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  /* Equipos + cancha */
+  --color-team-a: var(--team-a);
+  --color-team-a-foreground: var(--team-a-foreground);
+  --color-team-b: var(--team-b);
+  --color-team-b-foreground: var(--team-b-foreground);
+  --color-pitch: var(--pitch);
+  --color-pitch-deep: var(--pitch-deep);
+
+  /* Radios */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Animaciones */
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
 }
 
+/* ---------------------------------------------------------------- Light --- */
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.965 0.025 145);
-  --foreground: oklch(0.145 0 0);
+
+  --background: oklch(0.975 0.007 160);
+  --foreground: oklch(0.23 0.025 158);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.23 0.025 158);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.22 145); /* verde cancha */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.22 145);
+  --popover-foreground: oklch(0.23 0.025 158);
+
+  /* Verde esmeralda de marca */
+  --primary: oklch(0.63 0.15 160);
+  --primary-foreground: oklch(0.99 0.01 150);
+
+  --secondary: oklch(0.965 0.01 160);
+  --secondary-foreground: oklch(0.3 0.03 158);
+
+  --muted: oklch(0.965 0.008 160);
+  --muted-foreground: oklch(0.5 0.02 158);
+
+  --accent: oklch(0.95 0.035 158);
+  --accent-foreground: oklch(0.3 0.05 158);
+
+  --destructive: oklch(0.58 0.21 27);
+  --destructive-foreground: oklch(0.99 0.01 150);
+
+  --success: oklch(0.68 0.15 155);
+  --success-foreground: oklch(0.99 0.01 150);
+
+  --warning: oklch(0.78 0.15 78);
+  --warning-foreground: oklch(0.28 0.06 70);
+
+  --border: oklch(0.9 0.012 160);
+  --input: oklch(0.9 0.012 160);
+  --ring: oklch(0.63 0.15 160);
+
+  /* Equipo A: verde lima · Equipo B: azul eléctrico */
+  --team-a: oklch(0.83 0.19 130);
+  --team-a-foreground: oklch(0.27 0.07 135);
+  --team-b: oklch(0.64 0.19 252);
+  --team-b-foreground: oklch(0.99 0.01 250);
+
+  /* Cancha */
+  --pitch: oklch(0.22 0.035 160);
+  --pitch-deep: oklch(0.14 0.025 160);
 }
 
+/* ----------------------------------------------------------------- Dark --- */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.65 0.22 145);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.65 0.22 145);
+  --background: oklch(0.16 0.02 158);
+  --foreground: oklch(0.97 0.01 150);
+
+  --card: oklch(0.21 0.026 158);
+  --card-foreground: oklch(0.97 0.01 150);
+  --popover: oklch(0.21 0.026 158);
+  --popover-foreground: oklch(0.97 0.01 150);
+
+  --primary: oklch(0.78 0.17 148);
+  --primary-foreground: oklch(0.18 0.04 158);
+
+  --secondary: oklch(0.27 0.03 158);
+  --secondary-foreground: oklch(0.97 0.01 150);
+
+  --muted: oklch(0.27 0.03 158);
+  --muted-foreground: oklch(0.72 0.02 155);
+
+  --accent: oklch(0.3 0.045 158);
+  --accent-foreground: oklch(0.97 0.01 150);
+
+  --destructive: oklch(0.7 0.19 25);
+  --destructive-foreground: oklch(0.16 0.02 158);
+
+  --success: oklch(0.78 0.17 148);
+  --success-foreground: oklch(0.18 0.04 158);
+
+  --warning: oklch(0.82 0.15 82);
+  --warning-foreground: oklch(0.2 0.05 70);
+
+  --border: oklch(0.33 0.03 158);
+  --input: oklch(0.33 0.03 158);
+  --ring: oklch(0.78 0.17 148);
+
+  --team-a: oklch(0.86 0.2 130);
+  --team-a-foreground: oklch(0.24 0.07 135);
+  --team-b: oklch(0.72 0.16 250);
+  --team-b-foreground: oklch(0.16 0.04 250);
+
+  --pitch: oklch(0.2 0.035 160);
+  --pitch-deep: oklch(0.12 0.022 160);
 }
 
+/* ------------------------------------------------------------------ Base --- */
 @layer base {
   * {
     @apply border-border;
   }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     margin: 0;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply tracking-tight;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 30%, transparent);
+  }
+
+  /* Scrollbar discreta (desktop) */
+  @media (pointer: fine) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklch, var(--muted-foreground) 35%, transparent) transparent;
+    }
   }
 }
 
+/* ------------------------------------------------------------- Utilities --- */
 @layer utilities {
-  .font-graffiti {
-    font-family: 'Permanent Marker', system-ui, sans-serif;
-    letter-spacing: 0.01em;
-  }
   .font-display {
-    font-family: 'Bebas Neue', system-ui, sans-serif;
-    letter-spacing: 0.05em;
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
   }
-  .bg-radial-spotlight {
-    background: radial-gradient(circle at center, rgba(132, 204, 22, 0.18), transparent 65%);
-  }
+
+  /* Fondo de cancha nocturna con iluminación de estadio */
   .bg-pitch-vignette {
     background:
-      radial-gradient(ellipse at top, rgba(132, 204, 22, 0.18), transparent 60%),
-      radial-gradient(ellipse at bottom, rgba(0, 0, 0, 0.6), transparent 70%),
-      linear-gradient(180deg, #0a1a0f 0%, #050d09 100%);
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(190, 242, 100, 0.14), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 15%, rgba(56, 189, 248, 0.1), transparent 65%),
+      radial-gradient(ellipse at bottom, rgba(0, 0, 0, 0.65), transparent 72%),
+      linear-gradient(180deg, #0c2a1b 0%, #071710 45%, #04100a 100%);
+  }
+
+  .bg-pitch-glow {
+    background: radial-gradient(circle at center, rgba(132, 204, 22, 0.18), transparent 65%);
+  }
+
+  /* Franjas de césped sutiles */
+  .bg-pitch-stripes {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 44px,
+      transparent 44px,
+      transparent 88px
+    );
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-shadow-hero {
+    text-shadow: 0 3px 14px rgba(0, 0, 0, 0.85);
+  }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--foreground) 6%, transparent),
+      transparent
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  70% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

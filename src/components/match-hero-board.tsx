@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MousePointerClick } from 'lucide-react'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
@@ -7,9 +8,10 @@ import {
   type PlayerCardDragData,
   type PlayerSlotDropData,
 } from '@/components/player-card-hero'
-import { buildTeams, type TeamKey, type TeamSlot } from '@/lib/teams'
-import { useReorderRegistrations, type RegistrationAssignment } from '@/lib/api-matches'
+import type { TeamKey, TeamSlot } from '@/lib/teams'
+import { buildTeams } from '@/lib/teams'
 import { resolveAssetUrl } from '@/lib/assets'
+import { useReorderRegistrations, type RegistrationAssignment } from '@/lib/api-matches'
 import type { MatchDetail, MatchPlayer } from '@/types/match'
 import { cn } from '@/lib/utils'
 
@@ -47,17 +49,14 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
     [],
   )
 
-  // Detección de nuevas llegadas: los ids "frescos" se calculan en un efecto,
-  // nunca durante el render (StrictMode renderiza doble en dev y las mutaciones
-  // de las refs dentro del useMemo hacían que la animación de llegada nunca
-  // disparara: al segundo render el id ya estaba "visto").
+  // Detección de nuevas llegadas (ver comentario original): los ids "frescos"
+  // se calculan en un efecto, nunca durante el render.
   const seenIds = useRef<Set<string>>(new Set())
   const initialMount = useRef(true)
   const [newIds, setNewIds] = useState<Set<string>>(() => new Set())
   useEffect(() => {
     const currentIds = new Set(match.registrations.map((r) => r.id))
     if (initialMount.current) {
-      // Primer render: todo lo que ya está inscripto es "viejo".
       initialMount.current = false
       seenIds.current = currentIds
       return
@@ -84,28 +83,26 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
         y: 0,
         rotationX: 0,
         stagger: { each: 0.04, from: 'start' },
-        duration: 0.65,
+        duration: 0.7,
         ease: 'back.out(1.4)',
       },
     )
     return () => {
       tween.kill()
     }
-  }, [match.id])
+  }, [match.registrations])
 
-  // VS pulsante
+  // Pulso del VS
   useGSAP(
     () => {
-      const tween = (el: Element | null) => {
-        if (!el) return null
-        return gsap.to(el, {
-          scale: 1.12,
-          rotation: '+=4',
-          duration: 1.2,
+      const tween = (ref: HTMLSpanElement | null) => {
+        if (!ref) return null
+        return gsap.to(ref, {
+          scale: 1.08,
+          duration: 1.6,
           yoyo: true,
           repeat: -1,
           ease: 'sine.inOut',
-          transformOrigin: 'center center',
         })
       }
       const t1 = tween(vsRef.current)
@@ -118,43 +115,48 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
     { scope: containerRef },
   )
 
-  // Monitor DnD: drop a slot (vacío u ocupado). Swap si ocupado, move si vacío.
+  // Refs con el estado más reciente para que el monitor de DnD (registrado una
+  // sola vez) lea siempre el layout/mutación actuales sin re-suscribirse.
   const layoutRef = useRef(layout)
   useEffect(() => {
     layoutRef.current = layout
-  })
+  }, [layout])
   const reorderRef = useRef(reorder)
   useEffect(() => {
     reorderRef.current = reorder
-  })
+  }, [reorder])
 
   useEffect(() => {
     if (!canReorder) return
     return monitorForElements({
+      canMonitor: ({ source }) => source.data.type === 'player-card',
       onDrop: ({ source, location }) => {
         const target = location.current.dropTargets[0]
         if (!target) return
         const sourceData = source.data as unknown as PlayerCardDragData
         const targetData = target.data as unknown as PlayerSlotDropData
         if (sourceData.type !== 'player-card' || targetData.type !== 'player-slot') return
-        if (sourceData.fromPosition === targetData.position) return
 
-        const { teamA, teamB } = layoutRef.current
-        const allSlots = [...teamA, ...teamB]
-        const targetSlot = allSlots.find((s) => s.position === targetData.position)
-        if (!targetSlot) return
+        const from = sourceData.fromPosition
+        const to = targetData.position
+        if (from === to) return
 
-        const assignments: RegistrationAssignment[] = [
-          { registrationId: sourceData.registrationId, position: targetData.position },
-        ]
-        // Si el target estaba ocupado, swap (el ocupante va a la posición del source).
-        if (targetSlot.registration) {
-          assignments.push({
-            registrationId: targetSlot.registration.id,
-            position: sourceData.fromPosition,
-          })
+        const current = layoutRef.current
+        const slots = [...current.teamA, ...current.teamB]
+        const fromSlot = slots.find((s) => s.position === from)
+        const toSlot = slots.find((s) => s.position === to)
+        if (!fromSlot || !toSlot) return
+
+        // Intercambio: la tarjeta arrastrada ocupa el slot destino y, si había
+        // alguien, esa persona pasa al slot original. Misma lógica de siempre.
+        const assignments: RegistrationAssignment[] = []
+        if (fromSlot.registration) {
+          assignments.push({ registrationId: fromSlot.registration.id, position: to })
         }
-
+        if (toSlot.registration) {
+          assignments.push({ registrationId: toSlot.registration.id, position: from })
+        }
+        if (assignments.length === 0) return
         reorderRef.current.mutate(assignments)
       },
     })
@@ -163,28 +165,34 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
   return (
     <section
       ref={containerRef}
-      className="relative rounded-2xl overflow-hidden border border-emerald-500/15 bg-black/20 backdrop-blur-sm px-4 py-8 md:px-8 md:py-12 overscroll-contain"
+      className="relative overflow-hidden rounded-2xl border border-white/10 bg-pitch-deep/40 px-4 py-8 backdrop-blur-sm md:px-8 md:py-12"
     >
-      <div className="absolute inset-0 pointer-events-none opacity-[0.07]" aria-hidden>
-        <div className="absolute inset-y-0 left-1/2 w-px bg-white" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-24 rounded-full border border-white" />
+      {/* Iluminación y textura de estadio */}
+      <div className="pointer-events-none absolute inset-0 bg-pitch-glow opacity-60" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-pitch-stripes opacity-60" aria-hidden />
+      <div className="pointer-events-none absolute inset-0" aria-hidden>
+        <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/[0.06]" />
+        <div className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.06]" />
       </div>
 
-      <header className="relative text-center mb-6 md:mb-10">
-        <p className="font-display text-xs tracking-[0.4em] text-emerald-300/70 mb-1">
-          ELIGE TU LADO
-        </p>
-        <h2 className="font-graffiti text-3xl md:text-5xl text-lime-300 drop-shadow-[0_2px_8px_rgba(132,204,22,0.4)]">
-          La plantilla
+      <header className="relative mb-6 text-center md:mb-10">
+        <p className="font-display text-xs tracking-[0.45em] text-team-a/70">ELIGE TU LADO</p>
+        <h2 className="font-display text-4xl leading-none text-white text-shadow-hero md:text-6xl">
+          La Plantilla
         </h2>
-        {canReorder && (
-          <p className="text-xs text-emerald-300/70 mt-2">
-            Arrastra una tarjeta a cualquier slot (vacío u ocupado) para reordenar.
+        {canReorder ? (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-emerald-100/80">
+            <MousePointerClick className="size-3.5" />
+            Arrastra las tarjetas para reordenar los equipos
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-emerald-100/60">
+            Mantén presionada una tarjeta para ver la foto de cuerpo entero
           </p>
         )}
       </header>
 
-      <div className="relative grid grid-cols-2 gap-3 md:gap-6 items-start">
+      <div className="relative grid grid-cols-2 items-start gap-3 md:gap-6">
         <TeamColumn
           team="A"
           slots={layout.teamA}
@@ -197,13 +205,12 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
         />
 
         <div
-          className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none"
+          className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 md:flex"
           aria-hidden
         >
           <span
             ref={vsRef}
-            className="font-graffiti text-6xl text-red-500 drop-shadow-[0_0_18px_rgba(239,68,68,0.6)] inline-block"
-            style={{ transform: 'rotate(-6deg)' }}
+            className="inline-block font-display text-6xl text-white text-shadow-hero"
           >
             VS
           </span>
@@ -223,11 +230,10 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
 
       <HeroReveal selection={selection} isCurrentUser={selection?.player.id === currentUserId} />
 
-      <div className="md:hidden flex justify-center my-4">
+      <div className="my-4 flex justify-center md:hidden">
         <span
           ref={vsMobileRef}
-          className="font-graffiti text-4xl text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.6)] inline-block"
-          style={{ transform: 'rotate(-4deg)' }}
+          className="inline-block font-display text-4xl text-white text-shadow-hero"
         >
           VS
         </span>
@@ -255,24 +261,33 @@ function TeamColumn({
   onHeroEnter?: (userId: string) => void
   onHeroLeave?: (userId: string) => void
 }) {
-  const accent = team === 'A' ? 'text-lime-300' : 'text-sky-300'
   const occupied = slots.filter((s) => s.registration).length
+  const isTeamA = team === 'A'
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <header className="text-center mb-1">
-        <p className={cn('font-display text-xs tracking-[0.3em] opacity-70', accent)}>EQUIPO</p>
-        <p
+      <header className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={cn(
+              'flex size-8 shrink-0 items-center justify-center rounded-lg font-display text-xl',
+              isTeamA ? 'bg-team-a text-team-a-foreground' : 'bg-team-b text-team-b-foreground',
+            )}
+          >
+            {team}
+          </span>
+          <span className="truncate text-sm font-bold text-white">
+            Equipo <span className="hidden sm:inline">{isTeamA ? 'A' : 'B'}</span>
+          </span>
+        </div>
+        <span
           className={cn(
-            'font-graffiti text-4xl md:text-5xl drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)]',
-            accent,
+            'shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
+            isTeamA ? 'bg-team-a/15 text-team-a' : 'bg-team-b/15 text-team-b',
           )}
         >
-          {team}
-        </p>
-        <p className={cn('text-xs font-medium', accent, 'opacity-80')}>
-          {occupied} / {slotsPerTeam} jugadores
-        </p>
+          {occupied}/{slotsPerTeam}
+        </span>
       </header>
 
       <div className="grid grid-cols-2 gap-2 md:gap-3">
@@ -310,11 +325,10 @@ function HeroReveal({
   const card = (
     <div
       className={cn(
-        'relative w-full h-full rounded-2xl overflow-hidden',
-        'ring-2 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)]',
+        'relative size-full overflow-hidden rounded-2xl ring-2 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)]',
         'bg-[radial-gradient(circle_at_center,#0d1f14_0%,#050d09_70%,#000_100%)]',
-        isTeamA ? 'ring-lime-300/70' : 'ring-sky-300/70',
-        isCurrentUser && 'ring-lime-300 shadow-[0_0_50px_-10px_rgba(190,242,100,0.7)]',
+        isTeamA ? 'ring-team-a/70' : 'ring-team-b/70',
+        isCurrentUser && 'ring-team-a shadow-[0_0_50px_-10px_var(--team-a)]',
       )}
     >
       <img
@@ -322,35 +336,35 @@ function HeroReveal({
         src={heroSrc}
         alt={displayName}
         draggable={false}
-        className="absolute inset-0 w-full h-full object-cover object-center animate-in fade-in duration-300 pointer-events-none"
+        className="pointer-events-none absolute inset-0 size-full animate-in object-cover object-center fade-in duration-300"
       />
-      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black via-black/80 to-transparent" />
       {number != null && (
         <span
           className={cn(
-            'absolute top-3 right-3 font-display text-4xl md:text-5xl leading-none drop-shadow-[0_2px_6px_rgba(0,0,0,0.8)]',
-            isTeamA ? 'text-lime-300' : 'text-sky-300',
+            'absolute right-3 top-2 font-display text-5xl leading-none',
+            isTeamA ? 'text-team-a' : 'text-team-b',
           )}
         >
-          #{String(number).padStart(2, '0')}
+          {number}
         </span>
       )}
-      <div className="absolute inset-x-0 bottom-0 p-4 text-center">
+      <div className="absolute inset-x-0 bottom-0 p-3 text-center">
         <p
           className={cn(
-            'font-graffiti text-2xl md:text-3xl tracking-wide drop-shadow-[0_3px_10px_rgba(0,0,0,0.9)] uppercase leading-tight',
-            isTeamA ? 'text-lime-300' : 'text-sky-300',
+            'truncate font-display text-3xl uppercase leading-none',
+            isTeamA ? 'text-team-a' : 'text-team-b',
           )}
         >
           {displayName}
         </p>
         {player.lastName && (
-          <p className="text-[10px] md:text-xs uppercase tracking-widest text-white/60 mt-1 truncate">
+          <p className="mt-1 truncate text-[10px] uppercase tracking-widest text-white/60">
             {fullName}
           </p>
         )}
         {isCurrentUser && (
-          <span className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest bg-lime-300 text-emerald-950">
+          <span className="mt-2 inline-block rounded-full bg-team-a px-2 py-0.5 text-[10px] font-black tracking-widest text-team-a-foreground">
             TÚ
           </span>
         )}
@@ -360,26 +374,23 @@ function HeroReveal({
 
   return (
     <>
-      {/* Desktop: panel lateral fijo, izquierda o derecha según equipo */}
       <div
         className={cn(
-          'hidden md:block fixed top-1/2 -translate-y-1/2 z-40 pointer-events-none',
-          'w-[260px] lg:w-[320px] aspect-[9/16]',
+          'pointer-events-none fixed top-1/2 z-30 hidden w-56 -translate-y-1/2 md:block lg:w-64',
+          'aspect-[9/16]',
           isTeamA ? 'left-4 lg:left-8' : 'right-4 lg:right-8',
           'animate-in fade-in zoom-in-95 duration-200',
-          isTeamA ? 'slide-in-from-left-4' : 'slide-in-from-right-4',
         )}
         aria-hidden
       >
         {card}
       </div>
 
-      {/* Mobile: modal centrado */}
       <div
-        className="md:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-8 pointer-events-none animate-in fade-in duration-200"
+        className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in duration-200 md:hidden"
         aria-hidden
       >
-        <div className="w-full max-w-[260px] aspect-[9/16] animate-in zoom-in-95 duration-200">
+        <div className="aspect-[9/16] w-full max-w-[260px] animate-in zoom-in-95 duration-200">
           {card}
         </div>
       </div>
