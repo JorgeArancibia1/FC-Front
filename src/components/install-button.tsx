@@ -57,15 +57,18 @@ export function InstallButton({
     if (outcome === 'dismissed') dismiss()
   }
 
+  // En mobile con iconOnlyOnMobile, usamos size="iconSm" para un touch target
+  // cuadrado de 36x36 (h-9 w-9) sin padding horizontal extra.
+  // Añadimos min-h-[44px] min-w-[44px] para cumplir con guidelines de accesibilidad táctil.
+  const buttonSize = iconOnlyOnMobile ? 'iconSm' : 'sm'
+
   return (
     <>
       <Button
         variant={variant}
-        size="sm"
+        size={buttonSize}
         onClick={handleClick}
-        className={className}
-        // En mobile el texto va en `hidden sm:inline`, que lo saca del árbol
-        // de accesibilidad: sin esto el botón queda sin nombre accesible.
+        className={cn(className, iconOnlyOnMobile && 'p-0 min-h-[44px] min-w-[44px] flex items-center justify-center')}
         aria-label="Instalar app"
       >
         <Download />
@@ -88,22 +91,28 @@ function IosInstallSheet({ onClose }: { onClose: () => void }) {
     }
     document.addEventListener('keydown', handleKey)
     closeRef.current?.focus()
-    return () => document.removeEventListener('keydown', handleKey)
+    // Bloquear scroll del body mientras la sheet está abierta
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+      document.body.style.overflow = ''
+    }
   }, [onClose])
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="ios-install-title"
-        className="w-full max-w-md rounded-2xl bg-card text-card-foreground shadow-2xl p-6 space-y-4 animate-in slide-in-from-bottom-4 duration-300"
+        className="w-full max-w-md max-h-[85vh] rounded-t-2xl rounded-b-none bg-card text-card-foreground shadow-2xl flex flex-col animate-in slide-in-from-bottom-4 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-start justify-between gap-3">
+        {/* Header fijo con botón cerrar visible */}
+        <header className="flex items-start justify-between gap-3 p-6 pb-4 border-b border-border flex-shrink-0 sticky top-0 bg-card/95 backdrop-blur-sm z-10 rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
               <Smartphone className="size-5 text-primary" />
@@ -121,50 +130,56 @@ function IosInstallSheet({ onClose }: { onClose: () => void }) {
             size="icon"
             onClick={onClose}
             aria-label="Cerrar"
-            className="-mr-2 -mt-2"
+            className="-mr-2 -mt-2 flex-shrink-0"
           >
             <X />
           </Button>
         </header>
 
-        <ol className="space-y-3 text-sm">
-          <Step
-            number={1}
-            icon={<Share className="size-4" />}
-            text={
-              <>
-                Toca el botón <strong>Compartir</strong> en la barra inferior de Safari.
-              </>
-            }
-          />
-          <Step
-            number={2}
-            icon={<Plus className="size-4" />}
-            text={
-              <>
-                Desliza y elige{' '}
-                <strong>"Agregar a pantalla de inicio"</strong>.
-              </>
-            }
-          />
-          <Step
-            number={3}
-            icon={<Download className="size-4" />}
-            text={
-              <>
-                Toca <strong>Agregar</strong> en la esquina superior derecha.
-              </>
-            }
-          />
-        </ol>
+        {/* Contenido scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 pb-20 space-y-4">
+          <ol className="space-y-3 text-sm">
+            <Step
+              number={1}
+              icon={<Share className="size-4" />}
+              text={
+                <>
+                  Toca el botón <strong>Compartir</strong> en la barra inferior de Safari.
+                </>
+              }
+            />
+            <Step
+              number={2}
+              icon={<Plus className="size-4" />}
+              text={
+                <>
+                  Desliza y elige{' '}
+                  <strong>"Agregar a pantalla de inicio"</strong>.
+                </>
+              }
+            />
+            <Step
+              number={3}
+              icon={<Download className="size-4" />}
+              text={
+                <>
+                  Toca <strong>Agregar</strong> en la esquina superior derecha.
+                </>
+              }
+            />
+          </ol>
 
-        <p className="text-xs text-muted-foreground border-t pt-3">
-          Importante: usa <strong>Safari</strong> (no Chrome) para instalar en iPhone/iPad.
-        </p>
+          <p className="text-xs text-muted-foreground border-t pt-3">
+            Importante: usa <strong>Safari</strong> (no Chrome) para instalar en iPhone/iPad.
+          </p>
+        </div>
 
-        <Button onClick={onClose} className="w-full" size="lg">
-          Entendido
-        </Button>
+        {/* Botón fijo al fondo */}
+        <div className="p-6 pt-0 border-t border-border flex-shrink-0 bg-card/95 backdrop-blur-sm sticky bottom-0 rounded-b-none">
+          <Button onClick={onClose} className="w-full" size="lg">
+            Entendido
+          </Button>
+        </div>
       </div>
     </div>
   )

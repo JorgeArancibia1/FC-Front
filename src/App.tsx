@@ -94,7 +94,7 @@ function App() {
           <Route path="*" element={<RedirectByRole />} />
         </Routes>
       </Suspense>
-      <Toaster position="top-center" richColors closeButton />
+      <Toaster position="bottom-center" richColors closeButton />
     </BrowserRouter>
   )
 }
