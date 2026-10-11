@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/use-auth'
+import { useMatchesRealtime } from '@/hooks/use-matches-realtime'
 import type { UserRole } from '@/types/auth'
 
 interface Props {
@@ -7,15 +8,20 @@ interface Props {
 }
 
 export function RequireAuth({ roles }: Props) {
-  const user = useCurrentUser()
+  const currentUser = useCurrentUser()
   const location = useLocation()
 
-  if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  // Refresco en vivo de la lista/detalle de partidos para toda el área autenticada.
+  useMatchesRealtime()
+
+  if (!currentUser) {
+    const next = `${location.pathname}${location.search}`
+    return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />
   }
 
-  if (roles && roles.length > 0 && !roles.some((r) => user.roles.includes(r))) {
-    return <Navigate to="/partido-activo" replace />
+  if (roles && roles.length > 0 && !roles.some((r) => currentUser.roles.includes(r))) {
+    // Sin permiso: lo mandamos a su página por defecto (evita bucles).
+    return <Navigate to="/" replace />
   }
 
   return <Outlet />

@@ -19,24 +19,26 @@ import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState, ErrorState, PageLoader } from '@/components/ui/feedback'
 import { ModalBackdrop } from '@/components/ui/confirm-dialog'
 import { UserAvatar } from '@/components/user-avatar'
+import { PlatformInviteDialog } from '@/components/platform-invite-dialog'
 import { useCurrentUser } from '@/hooks/use-auth'
-import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from '@/lib/api-users'
-import { isAdmin } from '@/lib/roles'
+import { useDeleteUser, useUpdateUser, useUsers } from '@/lib/api-users'
+import { useCreatePlatformInvite } from '@/lib/api-invites'
+import { isAdmin, isDeveloper } from '@/lib/roles'
 import { getApiErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
-import type { AdminUser, CreateUserInput, UpdateUserInput } from '@/types/admin-user'
+import type { AdminUser, UpdateUserInput } from '@/types/admin-user'
 import type { UserRole } from '@/types/auth'
 
 const ROLE_OPTIONS: { value: UserRole; label: string; icon: typeof ShieldCheck }[] = [
+  { value: 'developer', label: 'Desarrollador', icon: ShieldHalf },
   { value: 'admin', label: 'Administrador', icon: ShieldCheck },
-  { value: 'supervisor', label: 'Supervisor', icon: ShieldHalf },
   { value: 'usuario', label: 'Jugador', icon: UserRound },
 ]
 
 const ROLE_FILTERS: { value: UserRole | 'all'; label: string }[] = [
   { value: 'all', label: 'Todos' },
+  { value: 'developer', label: 'Desarrolladores' },
   { value: 'admin', label: 'Admins' },
-  { value: 'supervisor', label: 'Supervisores' },
   { value: 'usuario', label: 'Jugadores' },
 ]
 
@@ -56,16 +58,31 @@ function normalizeText(value: string): string {
 }
 
 export default function AdminUsersList() {
-  const { data, isPending, isError, error, refetch } = useUsers()
+  const { data, isPending, isError, error, refetch } = useUsers({ scope: 'invited' })
   const currentUser = useCurrentUser()
   const admin = isAdmin(currentUser)
+  const dev = isDeveloper(currentUser)
 
-  const [creating, setCreating] = useState(false)
+  const [inviting, setInviting] = useState(false)
   const [editing, setEditing] = useState<AdminUser | null>(null)
   const [deleting, setDeleting] = useState<AdminUser | null>(null)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState('all')
+
+  // La invitación se genera al abrir el diálogo (no en un useEffect) para evitar
+  // la desincronización del observer de TanStack Query con React StrictMode.
+  const platformCreate = useCreatePlatformInvite()
+  function openInvite() {
+    platformCreate.reset()
+    platformCreate.mutate()
+    setInviting(true)
+  }
+
+  // El filtro por rol "Desarrolladores" solo tiene sentido para un developer.
+  const roleFilters = dev
+    ? ROLE_FILTERS
+    : ROLE_FILTERS.filter((f) => f.value !== 'developer')
 
   const activeUsers = data?.filter((u) => u.status !== 'eliminado') ?? []
   const deletedCount = (data?.length ?? 0) - activeUsers.length
@@ -91,14 +108,16 @@ export default function AdminUsersList() {
           <>
             {activeUsers.length} activo{activeUsers.length === 1 ? '' : 's'}
             {deletedCount > 0 && ` · ${deletedCount} eliminado${deletedCount === 1 ? '' : 's'}`}
+            {' · '}
+            {dev
+              ? 'Todos los usuarios registrados.'
+              : 'Solo ves los usuarios que has invitado (link o código).'}
           </>
         }
         actions={
-          admin ? (
-            <Button onClick={() => setCreating(true)}>
-              <UserPlus /> Nuevo usuario
-            </Button>
-          ) : undefined
+          <Button onClick={openInvite}>
+            <UserPlus /> Añadir usuario
+          </Button>
         }
       />
 
@@ -117,7 +136,7 @@ export default function AdminUsersList() {
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <FilterChips
             label="Rol"
-            options={ROLE_FILTERS}
+            options={roleFilters}
             value={roleFilter}
             onChange={(v) => setRoleFilter(v as UserRole | 'all')}
           />
@@ -138,14 +157,16 @@ export default function AdminUsersList() {
       {data && data.length === 0 && (
         <EmptyState
           icon={UserPlus}
-          title="Aún no hay usuarios"
-          description="Crea el primer usuario para que pueda inscribirse a los partidos."
+          title={dev ? 'Aún no hay usuarios' : 'Aún no has invitado a nadie'}
+          description={
+            dev
+              ? 'Comparte una invitación para que se registren y puedan inscribirse a los partidos.'
+              : 'Los usuarios que se registren con tu link o código de invitación aparecerán aquí. Usa "Añadir usuario" para generar uno.'
+          }
           action={
-            admin ? (
-              <Button onClick={() => setCreating(true)}>
-                <UserPlus /> Crear usuario
-              </Button>
-            ) : undefined
+            <Button onClick={openInvite}>
+              <UserPlus /> Añadir usuario
+            </Button>
           }
         />
       )}
@@ -200,7 +221,9 @@ export default function AdminUsersList() {
         </>
       )}
 
-      {creating && <CreateUserModal onClose={() => setCreating(false)} />}
+      {inviting && (
+        <PlatformInviteDialog create={platformCreate} onClose={() => setInviting(false)} />
+      )}
       {editing && <EditUserModal user={editing} onClose={() => setEditing(null)} />}
       {deleting && <DeleteUserModal user={deleting} onClose={() => setDeleting(null)} />}
     </div>
@@ -244,13 +267,13 @@ function FilterChips({
 
 function RoleBadge({ role }: { role: UserRole }) {
   const styles: Record<UserRole, string> = {
+    developer: 'bg-violet-500/15 text-violet-700 ring-violet-500/30 dark:text-violet-300',
     admin: 'bg-amber-500/15 text-amber-700 ring-amber-500/30 dark:text-amber-300',
-    supervisor: 'bg-team-b/15 text-team-b ring-team-b/30',
     usuario: 'bg-slate-500/15 text-slate-700 ring-slate-500/30 dark:text-slate-300',
   }
   const labels: Record<UserRole, string> = {
+    developer: 'Dev',
     admin: 'Admin',
-    supervisor: 'Supervisor',
     usuario: 'Jugador',
   }
   return (
@@ -425,109 +448,6 @@ function ModalCard({ children, titleId }: { children: React.ReactNode; titleId: 
   )
 }
 
-function CreateUserModal({ onClose }: { onClose: () => void }) {
-  const create = useCreateUser()
-
-  const [name, setName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [roles, setRoles] = useState<UserRole[]>(['usuario'])
-
-  function toggleRole(role: UserRole) {
-    setRoles((prev) => (prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]))
-  }
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    const input: CreateUserInput = { name, lastName: lastName || undefined, email, password, roles }
-    try {
-      await create.mutateAsync(input)
-      toast.success('Usuario creado')
-      onClose()
-    } catch (err) {
-      toast.error(getApiErrorMessage(err))
-    }
-  }
-
-  const errorMessage = create.error ? getApiErrorMessage(create.error) : null
-
-  return (
-    <ModalBackdrop onClose={onClose} titleId="create-user-title">
-      <ModalCard titleId="create-user-title">
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <h2 id="create-user-title" className="font-bold">
-              Nuevo usuario
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              El usuario podrá iniciar sesión con la contraseña que ingreses.
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Cerrar" className="-mr-2 -mt-2">
-            <X />
-          </Button>
-        </header>
-
-        <form onSubmit={onSubmit} className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="new-name">Nombre</Label>
-              <Input id="new-name" value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-lastName">Apellido</Label>
-              <Input id="new-lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="new-email">Email</Label>
-            <Input
-              id="new-email"
-              type="email"
-              autoComplete="off"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="usuario@example.com"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="new-password">Contraseña</Label>
-            <PasswordInput
-              id="new-password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              placeholder="Min 8, mayús+minús+número+símbolo"
-            />
-            <p className="text-xs text-muted-foreground">
-              Mostramos en claro para que la copies y se la pases al usuario.
-            </p>
-          </div>
-
-          <RoleSelector roles={roles} onToggle={toggleRole} />
-
-          {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
-
-          <div className="flex gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={roles.length === 0} loading={create.isPending} className="flex-1">
-              Crear
-            </Button>
-          </div>
-        </form>
-      </ModalCard>
-    </ModalBackdrop>
-  )
-}
-
 function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const update = useUpdateUser()
   const currentUser = useCurrentUser()
@@ -540,6 +460,7 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
     user.status === 'suspendido' ? 'suspendido' : 'activo',
   )
   const [newPassword, setNewPassword] = useState('')
+  const allowDeveloper = isDeveloper(currentUser)
 
   function toggleRole(role: UserRole) {
     setRoles((prev) => (prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]))
@@ -592,7 +513,7 @@ function EditUserModal({ user, onClose }: { user: AdminUser; onClose: () => void
             </div>
           </div>
 
-          <RoleSelector roles={roles} onToggle={toggleRole} isSelf={isSelf} />
+          <RoleSelector roles={roles} onToggle={toggleRole} isSelf={isSelf} allowDeveloper={allowDeveloper} />
 
           <div className="space-y-2">
             <Label>Estado</Label>
@@ -653,38 +574,42 @@ function RoleSelector({
   roles,
   onToggle,
   isSelf,
+  allowDeveloper,
 }: {
   roles: UserRole[]
   onToggle: (role: UserRole) => void
   isSelf?: boolean
+  allowDeveloper?: boolean
 }) {
   return (
     <div className="space-y-2">
       <Label>Roles</Label>
       <div className="flex flex-wrap gap-2">
-        {ROLE_OPTIONS.map(({ value, label, icon: Icon }) => {
-          const active = roles.includes(value)
-          const disabled = !!isSelf && value === 'admin' && active
-          return (
-            <button
-              key={value}
-              type="button"
-              onClick={() => !disabled && onToggle(value)}
-              disabled={disabled}
-              aria-pressed={active}
-              title={disabled ? 'No puedes quitarte el rol admin' : undefined}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold ring-1 ring-inset transition',
-                active
-                  ? 'bg-primary text-primary-foreground ring-primary'
-                  : 'bg-muted text-muted-foreground ring-border hover:bg-muted/70',
-                disabled && 'cursor-not-allowed opacity-60',
-              )}
-            >
-              <Icon className="size-3.5" /> {label}
-            </button>
-          )
-        })}
+        {ROLE_OPTIONS.filter((o) => o.value !== 'developer' || allowDeveloper).map(
+          ({ value, label, icon: Icon }) => {
+            const active = roles.includes(value)
+            const disabled = !!isSelf && (value === 'admin' || value === 'developer') && active
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => !disabled && onToggle(value)}
+                disabled={disabled}
+                aria-pressed={active}
+                title={disabled ? 'No puedes quitarte este rol' : undefined}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold ring-1 ring-inset transition',
+                  active
+                    ? 'bg-primary text-primary-foreground ring-primary'
+                    : 'bg-muted text-muted-foreground ring-border hover:bg-muted/70',
+                  disabled && 'cursor-not-allowed opacity-60',
+                )}
+              >
+                <Icon className="size-3.5" /> {label}
+              </button>
+            )
+          },
+        )}
       </div>
     </div>
   )

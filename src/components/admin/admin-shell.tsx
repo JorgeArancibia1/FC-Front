@@ -6,34 +6,48 @@ import {
   LayoutDashboard,
   UserCircle2,
   PlaySquare,
+  Cog,
   Menu,
   X,
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { InstallButton } from '@/components/install-button'
 import { UserAvatar } from '@/components/user-avatar'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Spinner } from '@/components/ui/feedback'
 import { useCurrentUser, useLogout } from '@/hooks/use-auth'
 import { useThemeColor } from '@/hooks/use-theme-color'
 import { useProfile } from '@/lib/api-profile'
-import { rolesLabel } from '@/lib/roles'
+import { useTheme, THEME_META_COLORS } from '@/lib/theme'
+import { isDeveloper, rolesLabel } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 
-const NAV = [
+interface NavItem {
+  to: string
+  label: string
+  icon: LucideIcon
+  end: boolean
+}
+
+const NAV: NavItem[] = [
   { to: '/admin', label: 'Inicio', icon: LayoutDashboard, end: true },
   { to: '/admin/partidos', label: 'Partidos', icon: Calendar, end: false },
   { to: '/admin/usuarios', label: 'Usuarios', icon: Users, end: false },
   { to: '/perfil', label: 'Mi perfil', icon: UserCircle2, end: false },
-  { to: '/partido-activo', label: 'Vista del partido', icon: PlaySquare, end: false },
-] as const
+  { to: '/inicio', label: 'Jugar', icon: PlaySquare, end: false },
+]
+
+const SYSTEM_ITEM: NavItem = { to: '/admin/sistema', label: 'Sistema', icon: Cog, end: false }
 
 const COLLAPSE_KEY = 'advfc.sidebarCollapsed'
 
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/admin/partidos')) return 'Partidos'
   if (pathname.startsWith('/admin/usuarios')) return 'Usuarios'
+  if (pathname.startsWith('/admin/sistema')) return 'Sistema'
   return 'Inicio'
 }
 
@@ -43,6 +57,7 @@ export function AdminShell() {
   const logout = useLogout()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { resolvedTheme } = useTheme()
 
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -53,8 +68,8 @@ export function AdminShell() {
   })
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Header blanco (light) → status bar Android del mismo color.
-  useThemeColor('#ffffff')
+  // Header acorde al tema (light/dark) → status bar Android del mismo color.
+  useThemeColor(THEME_META_COLORS[resolvedTheme])
 
   // El drawer móvil se cierra al pulsar cualquier enlace (onNavigate), así que
   // no hace falta un efecto reactivo al cambio de ruta.
@@ -78,8 +93,11 @@ export function AdminShell() {
 
   const userLabel = profile?.name ?? user?.name ?? 'Usuario'
 
+  const navItems: NavItem[] = isDeveloper(user) ? [...NAV, SYSTEM_ITEM] : NAV
+
   const nav = (
     <NavList
+      items={navItems}
       collapsed={collapsed}
       onNavigate={() => setMobileOpen(false)}
       onLogout={handleLogout}
@@ -88,7 +106,7 @@ export function AdminShell() {
   )
 
   return (
-    <div className="min-h-svh bg-background">
+    <div className="min-h-svh bg-matchday">
       {/* Sidebar fija (desktop) */}
       <aside
         className={cn(
@@ -171,6 +189,7 @@ export function AdminShell() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              <ThemeToggle />
               <InstallButton iconOnlyOnMobile />
               <div className="flex items-center gap-2.5 rounded-full border border-border/70 bg-background/60 py-1 pl-1 pr-1 sm:pr-3">
                 <UserAvatar
@@ -186,6 +205,7 @@ export function AdminShell() {
               </div>
             </div>
           </div>
+          <span className="block h-0.5 grass-underline" aria-hidden />
         </header>
 
         <main className="mx-auto max-w-6xl px-4 py-6 md:py-8">
@@ -220,11 +240,13 @@ function SidebarBrand({ collapsed, onClick }: { collapsed?: boolean; onClick?: (
 }
 
 function NavList({
+  items,
   collapsed,
   onNavigate,
   onLogout,
   loggingOut,
 }: {
+  items: NavItem[]
   collapsed?: boolean
   onNavigate?: () => void
   onLogout: () => void
@@ -232,7 +254,7 @@ function NavList({
 }) {
   return (
     <nav className="flex flex-col gap-1">
-      {NAV.map(({ to, label, icon: Icon, end }) => (
+      {items.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}

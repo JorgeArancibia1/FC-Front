@@ -10,6 +10,7 @@ import {
   LogOut,
   Save,
   ShieldCheck,
+  Shirt,
   UserCircle2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,6 +19,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageLoader, ErrorState, Spinner } from '@/components/ui/feedback'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { useCurrentUser, useLogout } from '@/hooks/use-auth'
 import { useThemeColor } from '@/hooks/use-theme-color'
 import {
@@ -27,16 +30,22 @@ import {
   useUploadHeroPhoto,
   useUploadProfilePhoto,
 } from '@/lib/api-profile'
+import { useChangeRole } from '@/lib/api-auth'
+import { useTheme, THEME_META_COLORS } from '@/lib/theme'
 import { resolveAssetUrl } from '@/lib/assets'
-import { rolesLabel } from '@/lib/roles'
+import { isAdmin, rolesLabel } from '@/lib/roles'
 import { getApiErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
+import type { UserRole } from '@/types/auth'
 
 interface FormState {
   name: string
   lastName: string
   jerseyName: string
   preferredNumber: string
+  phone: string
+  securityQuestion: string
+  securityAnswer: string
 }
 
 // Validación previa al upload: el backend acepta imágenes dentro de estos
@@ -62,13 +71,17 @@ export default function PerfilPage() {
   const fileInput = useRef<HTMLInputElement>(null)
   const heroFileInput = useRef<HTMLInputElement>(null)
 
-  useThemeColor('#ffffff')
+  const { resolvedTheme } = useTheme()
+  useThemeColor(THEME_META_COLORS[resolvedTheme])
 
   const [form, setForm] = useState<FormState>({
     name: '',
     lastName: '',
     jerseyName: '',
     preferredNumber: '',
+    phone: '',
+    securityQuestion: '',
+    securityAnswer: '',
   })
 
   // Sincronizar form cuando llega el perfil (patrón "adjusting state when props
@@ -82,12 +95,15 @@ export default function PerfilPage() {
         lastName: profile.lastName ?? '',
         jerseyName: profile.jerseyName ?? '',
         preferredNumber: profile.preferredNumber?.toString() ?? '',
+        phone: profile.phone ?? '',
+        securityQuestion: profile.securityQuestion ?? '',
+        securityAnswer: '',
       })
     }
   }
 
-  const manager = currentUser?.roles.some((r) => r === 'admin' || r === 'supervisor')
-  const backHref = manager ? '/admin' : '/partido-activo'
+  const manager = isAdmin(currentUser)
+  const backHref = manager ? '/admin' : '/inicio'
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -97,6 +113,9 @@ export default function PerfilPage() {
         lastName: form.lastName.trim() || undefined,
         jerseyName: form.jerseyName.trim() || undefined,
         preferredNumber: form.preferredNumber ? Number(form.preferredNumber) : undefined,
+        phone: form.phone.trim() || undefined,
+        securityQuestion: form.securityQuestion.trim() || undefined,
+        securityAnswer: form.securityAnswer.trim() || undefined,
       })
       toast.success('Cambios guardados')
     } catch (err) {
@@ -152,7 +171,7 @@ export default function PerfilPage() {
   const heroUploadError = heroUpload.error ? getApiErrorMessage(heroUpload.error) : null
 
   return (
-    <div className="min-h-svh bg-background">
+    <div className="min-h-svh bg-matchday">
       <header className="sticky top-0 z-10 border-b border-border/70 bg-card/85 backdrop-blur-md pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-2 px-4 py-3">
           <Button asChild variant="ghost" size="sm" className="-ml-2">
@@ -161,9 +180,12 @@ export default function PerfilPage() {
             </Link>
           </Button>
           <h1 className="text-base font-bold">Mi perfil</h1>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive">
-            <LogOut /> Salir
-          </Button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-destructive">
+              <LogOut /> Salir
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -180,6 +202,17 @@ export default function PerfilPage() {
 
         {profile && (
           <>
+            {/* Tarjeta de jugador (estilo FIFA): foto vertical, dorsal y rol */}
+            <PlayerCard
+              name={profile.name}
+              lastName={profile.lastName}
+              jerseyName={profile.jerseyName}
+              number={profile.preferredNumber}
+              role={rolesLabel(profile.roles)}
+              photoUrl={profile.photoUrl}
+              heroPhotoUrl={profile.heroPhotoUrl}
+            />
+
             {/* A. Información personal */}
             <SectionCard letter="A" title="Información personal">
               <div className="flex items-center gap-4">
@@ -324,6 +357,53 @@ export default function PerfilPage() {
                   </div>
                 </div>
 
+                <div className="border-t border-border/70 pt-4">
+                  <p className="text-sm font-semibold">Datos de recuperación</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Sirven para recuperar tu correo si algún día lo olvidas.
+                  </p>
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Teléfono</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        maxLength={20}
+                        placeholder="+56912345678"
+                        value={form.phone}
+                        onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                        disabled={update.isPending}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="securityQuestion">Pregunta de seguridad</Label>
+                      <Input
+                        id="securityQuestion"
+                        maxLength={140}
+                        placeholder="¿Cuál es tu equipo favorito?"
+                        value={form.securityQuestion}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, securityQuestion: e.target.value }))
+                        }
+                        disabled={update.isPending}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <Label htmlFor="securityAnswer">Respuesta</Label>
+                    <Input
+                      id="securityAnswer"
+                      maxLength={140}
+                      placeholder="Déjalo vacío para no cambiarla"
+                      value={form.securityAnswer}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, securityAnswer: e.target.value }))
+                      }
+                      disabled={update.isPending}
+                    />
+                  </div>
+                </div>
+
                 {updateError && <p className="text-sm text-destructive">{updateError}</p>}
 
                 <div className="flex justify-end">
@@ -335,8 +415,11 @@ export default function PerfilPage() {
               </form>
             </SectionCard>
 
-            {/* D. Seguridad */}
-            <ChangePasswordCard letter="D" />
+            {/* D. Rol de la cuenta */}
+            <RoleCard letter="D" roles={profile.roles} />
+
+            {/* E. Seguridad */}
+            <ChangePasswordCard letter="E" />
           </>
         )}
       </main>
@@ -368,6 +451,93 @@ function SectionCard({
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
+  )
+}
+
+function RoleCard({ letter, roles }: { letter: string; roles: UserRole[] }) {
+  const navigate = useNavigate()
+  const change = useChangeRole()
+  const [confirming, setConfirming] = useState(false)
+
+  const isDeveloperRole = roles.includes('developer')
+  const isAdminRole = roles.includes('admin')
+
+  if (isDeveloperRole) {
+    return (
+      <SectionCard
+        letter={letter}
+        title="Rol de la cuenta"
+        description="Tu cuenta tiene acceso total al sistema."
+      >
+        <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+          <p className="text-sm">
+            Esta es la cuenta de <strong>desarrollador</strong>. Tiene acceso a todas las funciones y
+            al panel de configuración avanzada.
+          </p>
+        </div>
+      </SectionCard>
+    )
+  }
+
+  const target: 'usuario' | 'admin' = isAdminRole ? 'usuario' : 'admin'
+  const actionLabel = isAdminRole ? 'Cambiar a jugador' : 'Quiero administrar partidos'
+
+  return (
+    <SectionCard
+      letter={letter}
+      title="Rol de la cuenta"
+      description="Puedes cambiar entre jugador y administrador cuando quieras."
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <ShieldCheck className="size-5" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">
+              Rol actual: {isAdminRole ? 'Administrador' : 'Jugador'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isAdminRole
+                ? 'Como administrador puedes crear y gestionar partidos y usuarios.'
+                : 'Como jugador puedes inscribirte a partidos e invitar amigos.'}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant={isAdminRole ? 'outline' : 'default'}
+          onClick={() => setConfirming(true)}
+          loading={change.isPending}
+          className="shrink-0"
+        >
+          {actionLabel}
+        </Button>
+      </div>
+
+      <ConfirmDialog
+        open={confirming}
+        title={actionLabel}
+        description={
+          isAdminRole
+            ? 'Dejarás de administrar partidos y usuarios. Podrás volver a ser admin cuando quieras.'
+            : 'Tendrás acceso al panel para crear y gestionar partidos, usuarios e invitaciones.'
+        }
+        confirmLabel={actionLabel}
+        loading={change.isPending}
+        onCancel={() => setConfirming(false)}
+        onConfirm={async () => {
+          try {
+            await change.mutateAsync(target)
+            toast.success('Rol actualizado')
+            setConfirming(false)
+            navigate(target === 'admin' ? '/admin' : '/inicio', { replace: true })
+          } catch (err) {
+            toast.error(getApiErrorMessage(err))
+          }
+        }}
+      />
+    </SectionCard>
   )
 }
 
@@ -501,6 +671,73 @@ function PhotoAvatar({
           <Spinner className="size-6 text-white" />
         </div>
       )}
+    </div>
+  )
+}
+
+function PlayerCard({
+  name,
+  lastName,
+  jerseyName,
+  number,
+  role,
+  photoUrl,
+  heroPhotoUrl,
+}: {
+  name: string
+  lastName?: string | null
+  jerseyName?: string | null
+  number?: number | null
+  role: string
+  photoUrl?: string | null
+  heroPhotoUrl?: string | null
+}) {
+  const cover = resolveAssetUrl(heroPhotoUrl) || resolveAssetUrl(photoUrl)
+
+  return (
+    <section className="dark relative overflow-hidden rounded-2xl bg-pitch-vignette text-white shadow-lg ring-1 ring-black/20">
+      <div className="pointer-events-none absolute inset-0 bg-grass-stripes opacity-30" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-stadium-beams" aria-hidden />
+      <div className="relative flex items-stretch gap-4 p-4 sm:gap-5 sm:p-5">
+        <div className="relative w-24 shrink-0 overflow-hidden rounded-xl bg-black/40 ring-1 ring-white/15 sm:w-32">
+          <img
+            src={cover || '/hero-silhouette.svg'}
+            alt=""
+            className={cn('aspect-[9/16] w-full object-cover', !cover && 'opacity-80')}
+          />
+          {number != null && (
+            <span className="absolute bottom-1 right-1.5 font-display text-4xl leading-none text-white/95 text-shadow-hero sm:text-5xl">
+              {number}
+            </span>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-team-a ring-1 ring-white/15 backdrop-blur-sm">
+            <Shirt className="size-3" /> Jugador
+          </span>
+          <h2 className="mt-2 truncate font-display text-4xl uppercase leading-none text-shadow-hero sm:text-5xl">
+            {jerseyName?.trim() || name}
+          </h2>
+          <p className="mt-1 truncate text-sm text-white/75">
+            {name} {lastName ?? ''}
+          </p>
+
+          <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
+            <StatChip label="Dorsal" value={number != null ? `#${number}` : '—'} />
+            <StatChip label="Rol" value={role} />
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function StatChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-sm">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">{label}</p>
+      <p className="truncate text-sm font-bold tabular-nums">{value}</p>
     </div>
   )
 }

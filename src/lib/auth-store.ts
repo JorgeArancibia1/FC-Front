@@ -52,6 +52,14 @@ export const authStore = {
     localStorage.setItem(REFRESH_KEY, refreshToken)
     notify()
   },
+  // Actualiza solo el usuario cacheado (p. ej. tras un cambio de rol) sin tocar
+  // los tokens vigentes.
+  setUser(user: CurrentUser) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
+    cachedUserRaw = null
+    notify()
+  },
+
   clear() {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(REFRESH_KEY)

@@ -1,32 +1,37 @@
-import type { CurrentUser, UserRole } from '@/types/auth'
+import type { UserRole } from '@/types/auth'
 
-/** admin o supervisor (acceso al panel y edición de partidos). */
-export function isManager(user: CurrentUser | null | undefined): boolean {
-  return !!user?.roles.some((r) => r === 'admin' || r === 'supervisor')
+type RoleHolder = { roles: UserRole[] } | null | undefined
+
+/** Cuenta de desarrollador: acceso total + panel de configuración avanzada. */
+export function isDeveloper(user: RoleHolder): boolean {
+  return !!user?.roles.includes('developer')
 }
 
-/** solo admin. */
-export function isAdmin(user: CurrentUser | null | undefined): boolean {
-  return !!user?.roles.includes('admin')
+/** Administrador o desarrollador: gestiona partidos, usuarios e invitaciones. */
+export function isAdmin(user: RoleHolder): boolean {
+  return !!user?.roles.includes('admin') || isDeveloper(user)
 }
+
+/** Alias histórico: "manager" = puede administrar el club. */
+export const isManager = isAdmin
 
 export const ROLE_LABEL: Record<UserRole, string> = {
+  developer: 'Desarrollador',
   admin: 'Administrador',
-  supervisor: 'Supervisor',
   usuario: 'Jugador',
 }
 
 export const ROLE_SHORT: Record<UserRole, string> = {
+  developer: 'Dev',
   admin: 'Admin',
-  supervisor: 'Supervisor',
   usuario: 'Jugador',
 }
 
-/** Etiqueta legible para el conjunto de roles del usuario. */
-export function rolesLabel(roles: UserRole[] | undefined | null): string {
+export function rolesLabel(roles: UserRole[] | null | undefined): string {
   if (!roles || roles.length === 0) return 'Sin rol'
-  // Mostramos el rol de mayor jerarquía primero.
-  const priority: UserRole[] = ['admin', 'supervisor', 'usuario']
-  const sorted = [...roles].sort((a, b) => priority.indexOf(a) - priority.indexOf(b))
-  return sorted.map((r) => ROLE_LABEL[r]).join(' · ')
+  const order: UserRole[] = ['developer', 'admin', 'usuario']
+  return [...roles]
+    .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+    .map((r) => ROLE_LABEL[r] ?? r)
+    .join(' · ')
 }

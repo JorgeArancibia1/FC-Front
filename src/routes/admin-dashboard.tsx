@@ -17,6 +17,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/feedback'
 import { MatchEnrollButton } from '@/components/match-enroll-button'
 import { MatchStatusBadge } from '@/components/match-status-badge'
+import { KickoffTimer } from '@/components/kickoff-timer'
 import { useActiveMatch, useMatches } from '@/lib/api-matches'
 import { useUsers } from '@/lib/api-users'
 import { useCurrentUser } from '@/hooks/use-auth'
@@ -27,7 +28,7 @@ import { cn } from '@/lib/utils'
 
 export default function AdminDashboard() {
   const matches = useMatches()
-  const users = useUsers()
+  const users = useUsers({ scope: 'invited' })
   const activeMatch = useActiveMatch()
   const currentUser = useCurrentUser()
   const admin = isAdmin(currentUser)
@@ -42,6 +43,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       <PageHeader
+        icon={Trophy}
         title="Inicio"
         description="Resumen del club y accesos rápidos."
         actions={
@@ -89,36 +91,55 @@ export default function AdminDashboard() {
         )}
 
         {activeMatch.data && (
-          <Card className="overflow-hidden border-primary/25">
-            <div className="h-1.5 bg-gradient-to-r from-primary via-team-a to-primary" />
-            <CardContent className="space-y-4 p-5 sm:p-6">
+          <section className="dark relative overflow-hidden rounded-2xl border border-white/10 bg-pitch-vignette text-white shadow-lg ring-1 ring-black/20">
+            <div className="pointer-events-none absolute inset-0 bg-pitch-lines opacity-60" aria-hidden />
+            <div className="pointer-events-none absolute inset-0 bg-grass-stripes opacity-40" aria-hidden />
+            <div className="pointer-events-none absolute inset-0 bg-stadium-beams" aria-hidden />
+            <div className="relative space-y-4 p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="flex items-center gap-2 text-lg font-bold">
-                    <Trophy className="size-5 text-primary" />
-                    <span className="truncate">{activeMatch.data.place}</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-team-a ring-1 ring-white/15 backdrop-blur-sm">
+                    <Trophy className="size-3.5" /> Próximo partido
+                  </span>
+                  <h3 className="mt-2 font-display text-3xl uppercase leading-none text-shadow-hero sm:text-4xl">
+                    {activeMatch.data.place}
                   </h3>
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clock className="size-4" /> {formatMatchDate(activeMatch.data.dateTime)}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <Users className="size-4" />
-                      {activeMatch.data.registrations.length} / {activeMatch.data.requiredPlayers}{' '}
-                      jugadores
-                    </span>
-                  </div>
                 </div>
-                <MatchStatusBadge status={activeMatch.data.status} />
+                <MatchStatusBadge
+                  status={activeMatch.data.status}
+                  className="border-white/20 bg-black/30 backdrop-blur-sm"
+                />
               </div>
 
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-white/80">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="size-4" /> {formatMatchDate(activeMatch.data.dateTime)}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="size-4" />
+                  {activeMatch.data.registrations.length} / {activeMatch.data.requiredPlayers}{' '}
+                  jugadores
+                </span>
+                {activeMatch.data.status !== 'finished' &&
+                  activeMatch.data.status !== 'cancelled' && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 backdrop-blur-sm">
+                      <KickoffTimer
+                        dateTime={activeMatch.data.dateTime}
+                        className="text-[11px] text-white/90"
+                      />
+                    </span>
+                  )}
+              </div>
+
+              <div className="h-2 overflow-hidden rounded-full bg-white/15">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-team-a transition-[width] duration-500"
+                  className="h-full rounded-full bg-gradient-to-r from-team-a to-team-b transition-[width] duration-500"
                   style={{
                     width: `${Math.min(
                       100,
-                      (activeMatch.data.registrations.length / activeMatch.data.requiredPlayers) * 100,
+                      (activeMatch.data.registrations.length /
+                        Math.max(1, activeMatch.data.requiredPlayers)) *
+                        100,
                     )}%`,
                   }}
                 />
@@ -128,14 +149,18 @@ export default function AdminDashboard() {
                 <div className="flex-1">
                   <MatchEnrollButton match={activeMatch.data} />
                 </div>
-                <Button asChild variant="outline">
-                  <Link to="/partido-activo">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="border-white/20 bg-black/40 text-white hover:border-team-a/60 hover:bg-black/60 hover:text-white"
+                >
+                  <Link to={`/admin/partidos/${activeMatch.data.id}`}>
                     <Activity /> Ver plantilla
                   </Link>
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         )}
       </section>
 
@@ -204,10 +229,10 @@ export default function AdminDashboard() {
             description="Roles, estados y datos de los jugadores."
           />
           <QuickCard
-            to="/partido-activo"
+            to="/inicio"
             icon={PlaySquare}
-            title="Vista del partido"
-            description="La plantilla en vivo, con equipos A y B."
+            title="Vista del jugador"
+            description="Explora los partidos y la plantilla en vivo."
           />
         </div>
       </section>
@@ -229,7 +254,8 @@ function StatCard({
   accent?: string
 }) {
   return (
-    <Card className="transition-shadow hover:shadow-md">
+    <Card className="group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-lg">
+      <span className="absolute inset-x-0 top-0 h-0.5 grass-underline opacity-70" aria-hidden />
       <CardContent className="flex items-center gap-4 p-5">
         <div
           className={cn(
@@ -244,7 +270,9 @@ function StatCard({
           {loading ? (
             <Skeleton className="mt-1.5 h-7 w-12" />
           ) : (
-            <p className="text-2xl font-black tabular-nums leading-tight">{value}</p>
+            <p className="text-2xl font-black tabular-nums leading-tight transition-colors group-hover:text-primary">
+              {value}
+            </p>
           )}
         </div>
       </CardContent>

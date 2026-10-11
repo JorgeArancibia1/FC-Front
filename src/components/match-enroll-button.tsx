@@ -47,8 +47,8 @@ export function MatchEnrollButton({ match }: Props) {
 
   if (myReg) {
     return (
-      <div className="space-y-3 rounded-xl border border-team-a/30 bg-team-a/10 p-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-team-a">
+      <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
           <CheckCircle2 className="size-5" /> Estás inscrito en este partido
         </div>
         <Button
@@ -79,7 +79,7 @@ export function MatchEnrollButton({ match }: Props) {
 
   if (!isOpen) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-emerald-100/70">
+      <div className="rounded-xl border border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
         Las inscripciones para este partido están cerradas.
       </div>
     )
@@ -87,7 +87,7 @@ export function MatchEnrollButton({ match }: Props) {
 
   if (isFull) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center text-sm text-emerald-100/70">
+      <div className="rounded-xl border border-border bg-muted/50 p-4 text-center text-sm text-muted-foreground">
         El cupo está completo.
       </div>
     )

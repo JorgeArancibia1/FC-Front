@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   Plus,
   MapPin,
+  Goal,
   Clock,
   Users,
   Eye,
@@ -90,7 +91,7 @@ export default function AdminMatchesList() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PageHeader icon={Goal}
         title="Partidos"
         description={`${data?.length ?? 0} partido${data?.length === 1 ? '' : 's'} en total`}
         actions={
@@ -238,11 +239,12 @@ function MatchCard({
   const cancellable = manager && match.status !== 'cancelled' && match.status !== 'finished'
 
   return (
-    <Card className="group flex flex-col overflow-hidden transition-shadow hover:shadow-lg">
+    <Card className="group relative flex flex-col overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-lg">
+      <span className="absolute inset-y-0 left-0 w-1.5 bg-grass" aria-hidden />
       <div className={cn('h-1.5 bg-gradient-to-r', STATUS_ACCENT[match.status])} />
       <CardContent className="flex flex-1 flex-col gap-4 p-5">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="min-w-0 flex-1 font-bold leading-snug">
+          <h3 className="min-w-0 flex-1 font-display text-2xl leading-none sm:text-3xl">
             <span className="line-clamp-1">{match.place}</span>
           </h3>
           <MatchStatusBadge status={match.status} />
@@ -256,7 +258,9 @@ function MatchCard({
             <MapPin className="size-4 shrink-0" /> <span className="truncate">{match.place}</span>
           </p>
           <p className="inline-flex items-center gap-1.5">
-            <Users className="size-4 shrink-0" /> {registered} / {capacity} jugadores
+            <Users className="size-4 shrink-0" />
+            <span className="font-bold tabular-nums text-foreground">{registered}</span> / {capacity}{' '}
+            jugadores
           </p>
         </div>
 
@@ -275,7 +279,7 @@ function MatchCard({
           </Button>
           {manager && (
             <Button asChild size="iconSm" variant="ghost" title="Editar partido" aria-label="Editar partido">
-              <Link to={`/admin/partidos/${match.id}`}>
+              <Link to={`/admin/partidos/${match.id}/editar`}>
                 <Pencil />
               </Link>
             </Button>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MousePointerClick } from 'lucide-react'
+import { MousePointerClick, Shuffle } from 'lucide-react'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
@@ -19,9 +19,11 @@ interface Props {
   match: MatchDetail
   currentUserId?: string
   canReorder?: boolean
+  /** Modo inmersivo: cancha de borde a borde y a todo el alto del viewport. */
+  fullScreen?: boolean
 }
 
-export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
+export function MatchHeroBoard({ match, currentUserId, canReorder, fullScreen }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const vsRef = useRef<HTMLSpanElement>(null)
   const vsMobileRef = useRef<HTMLSpanElement>(null)
@@ -162,10 +164,30 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
     })
   }, [canReorder])
 
+  // Balancea los equipos al azar: baraja las inscripciones y reparte las
+  // primeras posiciones (Equipo A) y el resto (Equipo B). Un solo mutate.
+  const handleShuffle = useCallback(() => {
+    const players = [...match.registrations]
+    for (let i = players.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[players[i], players[j]] = [players[j], players[i]]
+    }
+    const assignments: RegistrationAssignment[] = players.map((r, idx) => ({
+      registrationId: r.id,
+      position: idx + 1,
+    }))
+    reorder.mutate(assignments)
+  }, [match.registrations, reorder])
+
   return (
     <section
       ref={containerRef}
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-pitch-deep/40 px-4 py-8 backdrop-blur-sm md:px-8 md:py-12"
+      className={cn(
+        'relative overflow-hidden rounded-2xl border border-white/10 bg-pitch-deep/40 backdrop-blur-sm',
+        fullScreen
+          ? 'flex min-h-[calc(100svh-5rem)] flex-col justify-center px-4 py-6 md:px-8 md:py-10'
+          : 'px-4 py-8 md:px-8 md:py-12',
+      )}
     >
       {/* Iluminación y textura de estadio */}
       <div className="pointer-events-none absolute inset-0 bg-pitch-glow opacity-60" aria-hidden />
@@ -175,16 +197,35 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
         <div className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/[0.06]" />
       </div>
 
-      <header className="relative mb-6 text-center md:mb-10">
+      <header
+        className={cn('relative text-center', fullScreen ? 'mb-4 md:mb-6' : 'mb-6 md:mb-10')}
+      >
         <p className="font-display text-xs tracking-[0.45em] text-team-a/70">ELIGE TU LADO</p>
-        <h2 className="font-display text-4xl leading-none text-white text-shadow-hero md:text-6xl">
+        <h2
+          className={cn(
+            'font-display leading-none text-white text-shadow-hero',
+            fullScreen ? 'text-3xl md:text-5xl' : 'text-4xl md:text-6xl',
+          )}
+        >
           La Plantilla
         </h2>
         {canReorder ? (
-          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-emerald-100/80">
-            <MousePointerClick className="size-3.5" />
-            Arrastra las tarjetas para reordenar los equipos
-          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <p className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-emerald-100/80">
+              <MousePointerClick className="size-3.5" />
+              Arrastra las tarjetas para reordenar los equipos
+            </p>
+            <button
+              type="button"
+              onClick={handleShuffle}
+              disabled={reorder.isPending || match.registrations.length < 2}
+              className="inline-flex items-center gap-1.5 rounded-full border border-team-a/40 bg-team-a/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-team-a transition-colors hover:bg-team-a/20 disabled:cursor-not-allowed disabled:opacity-50"
+              title="Mezcla los jugadores entre los dos equipos al azar"
+            >
+              <Shuffle className="size-3.5" />
+              {reorder.isPending ? 'Repartiendo…' : 'Balancear equipos'}
+            </button>
+          </div>
         ) : (
           <p className="mt-2 text-xs text-emerald-100/60">
             Mantén presionada una tarjeta para ver la foto de cuerpo entero
@@ -200,6 +241,7 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
           currentUserId={currentUserId}
           newIds={newIds}
           enableDnd={canReorder}
+          fullScreen={fullScreen}
           onHeroEnter={handleHeroEnter}
           onHeroLeave={handleHeroLeave}
         />
@@ -223,6 +265,7 @@ export function MatchHeroBoard({ match, currentUserId, canReorder }: Props) {
           currentUserId={currentUserId}
           newIds={newIds}
           enableDnd={canReorder}
+          fullScreen={fullScreen}
           onHeroEnter={handleHeroEnter}
           onHeroLeave={handleHeroLeave}
         />
@@ -249,6 +292,7 @@ function TeamColumn({
   currentUserId,
   newIds,
   enableDnd,
+  fullScreen,
   onHeroEnter,
   onHeroLeave,
 }: {
@@ -258,6 +302,7 @@ function TeamColumn({
   currentUserId?: string
   newIds: Set<string>
   enableDnd?: boolean
+  fullScreen?: boolean
   onHeroEnter?: (userId: string) => void
   onHeroLeave?: (userId: string) => void
 }) {
@@ -290,7 +335,12 @@ function TeamColumn({
         </span>
       </header>
 
-      <div className="grid grid-cols-2 gap-2 md:gap-3">
+      <div
+        className={cn(
+          'grid gap-2 md:gap-3',
+          fullScreen ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4' : 'grid-cols-2',
+        )}
+      >
         {slots.map((slot) => (
           <PlayerCardHero
             key={slot.position}

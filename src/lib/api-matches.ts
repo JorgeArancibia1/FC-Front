@@ -27,6 +27,17 @@ export function useMatches() {
   })
 }
 
+// Partidos en los que el usuario autenticado está inscrito.
+export function useMyMatches() {
+  return useQuery({
+    queryKey: ['matches', 'mine'],
+    queryFn: async () => {
+      const { data } = await api.get<MatchListItem[]>('/matches/mine')
+      return data
+    },
+  })
+}
+
 // El próximo partido relevante para el usuario: el match con dateTime futuro
 // más cercano que no esté cancelado ni finalizado. Si ninguno cumple, devuelve null.
 export function useActiveMatch() {
@@ -277,6 +288,36 @@ export function useReorderRegistrations(matchId: string) {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: QK.detail(matchId) })
       qc.invalidateQueries({ queryKey: ['matches', 'active'] })
+    },
+  })
+}
+
+// --- Gestión de jugadores por el admin --------------------------------------
+
+// Inscribe a otro usuario (Admin/Developer). También permite partidos cerrados.
+export function useAdminAddPlayer(matchId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { data } = await api.post(`/matches/${matchId}/players`, { userId })
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches'] })
+    },
+  })
+}
+
+// Quita a otro usuario del partido (Admin/Developer).
+export function useAdminRemovePlayer(matchId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/matches/${matchId}/players/${userId}`)
+      return userId
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches'] })
     },
   })
 }

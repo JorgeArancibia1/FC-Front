@@ -21,6 +21,7 @@ import { InstallButton } from '@/components/install-button'
 import { MatchEnrollButton } from '@/components/match-enroll-button'
 import { MatchHeroBoard } from '@/components/match-hero-board'
 import { MatchStatusBadge } from '@/components/match-status-badge'
+import { KickoffTimer } from '@/components/kickoff-timer'
 import { UserAvatar } from '@/components/user-avatar'
 import { useCurrentUser, useLogout } from '@/hooks/use-auth'
 import { useMatchRealtime, type RealtimeStatus } from '@/hooks/use-match-realtime'
@@ -162,10 +163,14 @@ export default function PartidoActivo() {
             <div className="h-1.5 bg-gradient-to-r from-team-a via-white/70 to-team-b" />
             <CardContent className="space-y-4 p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <h2 className="flex items-center gap-2 text-xl font-black text-white">
-                  <Trophy className="size-5 text-team-a" />
-                  <span className="truncate">{match.place}</span>
-                </h2>
+                <div className="min-w-0">
+                  <span className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-team-a/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-team-a ring-1 ring-team-a/30">
+                    <Trophy className="size-3" /> Día de partido
+                  </span>
+                  <h2 className="flex items-center gap-2 font-display text-2xl uppercase leading-none text-white text-shadow-hero sm:text-3xl">
+                    <span className="truncate">{match.place}</span>
+                  </h2>
+                </div>
                 <MatchStatusBadge status={match.status} />
               </div>
 
@@ -178,8 +183,16 @@ export default function PartidoActivo() {
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Users className="size-4" />
-                  {match.registrations.length} / {match.requiredPlayers} jugadores
+                  <span className="font-bold tabular-nums text-white">
+                    {match.registrations.length}
+                  </span>{' '}
+                  / {match.requiredPlayers} jugadores
                 </span>
+                {match.status !== 'finished' && match.status !== 'cancelled' && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-team-a/30 bg-team-a/10 px-2.5 py-1">
+                    <KickoffTimer dateTime={match.dateTime} className="text-[11px] text-team-a" />
+                  </span>
+                )}
               </div>
 
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
