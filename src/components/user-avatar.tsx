@@ -24,6 +24,8 @@ export function UserAvatar({ photoUrl, name, className, fallbackClassName }: Pro
       <img
         src={src}
         alt={name ?? 'Avatar'}
+        loading="lazy"
+        decoding="async"
         className={cn('rounded-xl object-cover shrink-0', className)}
       />
     )

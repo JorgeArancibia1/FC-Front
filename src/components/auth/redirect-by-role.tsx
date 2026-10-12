@@ -1,13 +1,13 @@
 import { Navigate } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/use-auth'
+import { isAdmin } from '@/lib/roles'
 
 // Decide la página por defecto según el rol del usuario logueado.
 // Si no hay sesión, manda al login.
 export function RedirectByRole() {
-  const user = useCurrentUser()
+  const currentUser = useCurrentUser()
 
-  if (!user) return <Navigate to="/login" replace />
+  if (!currentUser) return <Navigate to="/login" replace />
 
-  const isAdmin = user.roles.includes('admin') || user.roles.includes('supervisor')
-  return <Navigate to={isAdmin ? '/admin' : '/partido-activo'} replace />
+  return <Navigate to={isAdmin(currentUser) ? '/admin' : '/inicio'} replace />
 }

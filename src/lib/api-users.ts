@@ -7,11 +7,14 @@ const QK = {
   detail: (id: string) => ['admin', 'users', id] as const,
 }
 
-export function useUsers() {
+export function useUsers(options?: { scope?: 'invited' }) {
+  const scope = options?.scope
   return useQuery({
-    queryKey: QK.all,
+    queryKey: [...QK.all, scope ?? 'all'],
     queryFn: async () => {
-      const { data } = await api.get<AdminUser[]>('/users')
+      const { data } = await api.get<AdminUser[]>('/users', {
+        params: scope ? { scope } : undefined,
+      })
       return data
     },
   })

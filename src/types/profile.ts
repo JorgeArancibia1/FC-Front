@@ -9,6 +9,8 @@ export interface Profile {
   photoUrl?: string | null
   heroPhotoUrl?: string | null
   email: string
+  phone?: string | null
+  securityQuestion?: string | null
   roles: UserRole[]
   status: string
   createdAt: string
@@ -22,4 +24,7 @@ export interface UpdateProfileInput {
   preferredNumber?: number
   photoUrl?: string
   heroPhotoUrl?: string
+  phone?: string
+  securityQuestion?: string
+  securityAnswer?: string
 }

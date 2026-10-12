@@ -4,12 +4,19 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Tipografía */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Bebas Neue", ui-sans-serif, system-ui, sans-serif;
+
+  /* Superficies */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
+  /* Marca */
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -20,90 +27,521 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  /* Equipos + cancha */
+  --color-team-a: var(--team-a);
+  --color-team-a-foreground: var(--team-a-foreground);
+  --color-team-b: var(--team-b);
+  --color-team-b-foreground: var(--team-b-foreground);
+  --color-pitch: var(--pitch);
+  --color-pitch-deep: var(--pitch-deep);
+
+  /* Radios */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Animaciones */
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
+  --animate-spin-slow: spin 8s linear infinite;
+  --animate-bounce-slow: bounce-slow 2s ease-in-out infinite;
 }
 
+/* ---------------------------------------------------------------- Light --- */
 :root {
   --radius: 0.75rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+
+  --background: oklch(0.975 0.007 160);
+  --foreground: oklch(0.23 0.025 158);
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.23 0.025 158);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.55 0.22 145); /* verde cancha */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.22 145);
+  --popover-foreground: oklch(0.23 0.025 158);
+
+  /* Verde institucional de marca (#0B5C3B) */
+  --primary: #0b5c3b;
+  --primary-foreground: oklch(0.99 0.01 150);
+
+  --secondary: oklch(0.965 0.01 160);
+  --secondary-foreground: oklch(0.3 0.03 158);
+
+  --muted: oklch(0.965 0.008 160);
+  --muted-foreground: oklch(0.5 0.02 158);
+
+  --accent: oklch(0.95 0.035 158);
+  --accent-foreground: oklch(0.3 0.05 158);
+
+  --destructive: oklch(0.58 0.21 27);
+  --destructive-foreground: oklch(0.99 0.01 150);
+
+  --success: oklch(0.68 0.15 155);
+  --success-foreground: oklch(0.99 0.01 150);
+
+  --warning: oklch(0.78 0.15 78);
+  --warning-foreground: oklch(0.28 0.06 70);
+
+  --gold: oklch(0.7 0.13 85);
+  --gold-foreground: oklch(0.99 0.01 90);
+
+  --border: oklch(0.9 0.012 160);
+  --input: oklch(0.9 0.012 160);
+  --ring: #0b5c3b;
+
+  /* Equipo A: verde lima · Equipo B: azul eléctrico */
+  --team-a: oklch(0.83 0.19 130);
+  --team-a-foreground: oklch(0.27 0.07 135);
+  --team-b: oklch(0.64 0.19 252);
+  --team-b-foreground: oklch(0.99 0.01 250);
+
+  /* Cancha */
+  --pitch: oklch(0.22 0.035 160);
+  --pitch-deep: oklch(0.14 0.025 160);
 }
 
+/* ----------------------------------------------------------------- Dark --- */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.65 0.22 145);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.65 0.22 145);
+  --background: oklch(0.16 0.02 158);
+  --foreground: oklch(0.97 0.01 150);
+
+  --card: oklch(0.21 0.026 158);
+  --card-foreground: oklch(0.97 0.01 150);
+  --popover: oklch(0.21 0.026 158);
+  --popover-foreground: oklch(0.97 0.01 150);
+
+  --primary: oklch(0.78 0.17 148);
+  --primary-foreground: oklch(0.18 0.04 158);
+
+  --secondary: oklch(0.27 0.03 158);
+  --secondary-foreground: oklch(0.97 0.01 150);
+
+  --muted: oklch(0.27 0.03 158);
+  --muted-foreground: oklch(0.72 0.02 155);
+
+  --accent: oklch(0.3 0.045 158);
+  --accent-foreground: oklch(0.97 0.01 150);
+
+  --destructive: oklch(0.7 0.19 25);
+  --destructive-foreground: oklch(0.16 0.02 158);
+
+  --success: oklch(0.78 0.17 148);
+  --success-foreground: oklch(0.18 0.04 158);
+
+  --warning: oklch(0.82 0.15 82);
+  --warning-foreground: oklch(0.2 0.05 70);
+
+  --gold: oklch(0.82 0.13 90);
+  --gold-foreground: oklch(0.16 0.04 90);
+
+  --border: oklch(0.33 0.03 158);
+  --input: oklch(0.33 0.03 158);
+  --ring: oklch(0.78 0.17 148);
+
+  --team-a: oklch(0.86 0.2 130);
+  --team-a-foreground: oklch(0.24 0.07 135);
+  --team-b: oklch(0.72 0.16 250);
+  --team-b-foreground: oklch(0.16 0.04 250);
+
+  --pitch: oklch(0.2 0.035 160);
+  --pitch-deep: oklch(0.12 0.022 160);
 }
 
+/* ------------------------------------------------------------------ Base --- */
 @layer base {
   * {
     @apply border-border;
   }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: clip;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     margin: 0;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply tracking-tight;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 30%, transparent);
+  }
+
+  /* Scrollbar discreta (desktop) */
+  @media (pointer: fine) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklch, var(--muted-foreground) 35%, transparent) transparent;
+    }
   }
 }
 
+/* ------------------------------------------------------------- Utilities --- */
 @layer utilities {
-  .font-graffiti {
-    font-family: 'Permanent Marker', system-ui, sans-serif;
-    letter-spacing: 0.01em;
-  }
   .font-display {
-    font-family: 'Bebas Neue', system-ui, sans-serif;
-    letter-spacing: 0.05em;
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
   }
-  .text-stroke-black {
-    -webkit-text-stroke: 1px rgba(0, 0, 0, 0.5);
+
+  /* Fondo "matchday" para las zonas light: césped mate muy sutil + resplandor
+     superior de estadio. Se usa en los shells de usuario y admin. */
+  .bg-matchday {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(ellipse 100% 42% at 50% -8%, color-mix(in oklch, var(--primary) 10%, transparent), transparent 70%),
+      repeating-linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--team-a) 3%, transparent) 0px,
+        color-mix(in oklch, var(--team-a) 3%, transparent) 88px,
+        transparent 88px,
+        transparent 176px
+      );
+    background-attachment: fixed;
   }
-  .bg-radial-spotlight {
-    background: radial-gradient(circle at center, rgba(132, 204, 22, 0.18), transparent 65%);
-  }
+
+  /* Fondo de cancha nocturna con iluminación de estadio */
   .bg-pitch-vignette {
     background:
-      radial-gradient(ellipse at top, rgba(132, 204, 22, 0.18), transparent 60%),
-      radial-gradient(ellipse at bottom, rgba(0, 0, 0, 0.6), transparent 70%),
-      linear-gradient(180deg, #0a1a0f 0%, #050d09 100%);
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(190, 242, 100, 0.14), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 15%, rgba(56, 189, 248, 0.1), transparent 65%),
+      radial-gradient(ellipse at bottom, rgba(0, 0, 0, 0.65), transparent 72%),
+      linear-gradient(180deg, #0c2a1b 0%, #071710 45%, #04100a 100%);
+  }
+
+  .bg-pitch-glow {
+    background: radial-gradient(circle at center, rgba(132, 204, 22, 0.18), transparent 65%);
+  }
+
+  /* Franjas de césped sutiles */
+  .bg-pitch-stripes {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 44px,
+      transparent 44px,
+      transparent 88px
+    );
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .text-shadow-hero {
+    text-shadow: 0 3px 14px rgba(0, 0, 0, 0.85);
+  }
+
+  /* ---------------------------------------------------- Cancha / fútbol --- */
+
+  /* Césped del club (verde institucional). */
+  .bg-grass {
+    background-image: linear-gradient(180deg, #0e6b45 0%, #0b5c3b 55%, #07432b 100%);
+  }
+
+  /* Franjas de corte del césped (mow) para superponer sobre el verde. */
+  .bg-grass-stripes {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.07) 0px,
+      rgba(255, 255, 255, 0.07) 22px,
+      transparent 22px,
+      transparent 44px
+    );
+  }
+
+  /* Líneas de cancha: círculo central + línea de medio campo (vista cenital). */
+  .bg-pitch-lines {
+    background-image:
+      radial-gradient(
+        circle at 50% 50%,
+        transparent 0,
+        transparent 33%,
+        rgba(255, 255, 255, 0.16) 33%,
+        rgba(255, 255, 255, 0.16) 34.5%,
+        transparent 34.5%
+      ),
+      linear-gradient(
+        90deg,
+        transparent calc(50% - 1.5px),
+        rgba(255, 255, 255, 0.16) calc(50% - 1.5px),
+        rgba(255, 255, 255, 0.16) calc(50% + 1.5px),
+        transparent calc(50% + 1.5px)
+      );
+  }
+
+  /* Iluminación de estadio: haces de luz que caen desde arriba. */
+  .bg-stadium-beams {
+    background-image:
+      radial-gradient(ellipse 45% 65% at 16% 0%, rgba(190, 242, 100, 0.18), transparent 70%),
+      radial-gradient(ellipse 45% 65% at 84% 0%, rgba(56, 189, 248, 0.14), transparent 70%);
+  }
+
+  /* Borde de arco/área para separadores sutiles. */
+  .grass-underline {
+    background-image: linear-gradient(90deg, var(--primary), var(--team-a), var(--team-b));
+  }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--foreground) 6%, transparent),
+      transparent
+    );
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  70% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+/* Animaciones profesionales para toda la página */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(190, 242, 100, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(190, 242, 100, 0.4);
+  }
+}
+
+@keyframes border-glow {
+  0%, 100% {
+    border-color: rgba(190, 242, 100, 0.3);
+  }
+  50% {
+    border-color: rgba(190, 242, 100, 0.6);
+  }
+}
+
+/* Clases de animación reutilizables */
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 0.6s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.6s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.6s ease-out forwards;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.animate-border-glow {
+  animation: border-glow 3s ease-in-out infinite;
+}
+
+/* Stagger delays para animaciones en secuencia */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+
+/* Hover effects profesionales */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+.hover-glow:hover {
+  box-shadow: 0 0 30px rgba(190, 242, 100, 0.3);
+}
+
+/* Transiciones suaves para interactividad */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efecto de carga progresiva */
+.stagger-item {
+  opacity: 0;
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

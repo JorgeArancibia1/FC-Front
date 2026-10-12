@@ -9,18 +9,24 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': el SW nuevo queda en "waiting" y lo avisa main.tsx con un
+      // toast, para no recargar en contra de la voluntad del usuario.
+      registerType: 'prompt',
+      // El registro se hace a mano en main.tsx vía `virtual:pwa-register`.
+      injectRegister: false,
+      // Los iconos del manifest se sirven de la red en el momento de instalar;
+      // no hace falta precachearlos (~900 KB de PNG que solo pesan el install).
+      includeManifestIcons: false,
       includeAssets: [
         'favicon.ico',
-        'apple-touch-icon.png',
         'icons.svg',
       ],
       manifest: {
-        name: 'Árbol de Vida FC',
-        short_name: 'AdV FC',
-        description: 'Inscripción a partidos del club Árbol de Vida FC',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        name: 'Gol FC',
+        short_name: 'GFC',
+        description: 'Inscripción a partidos del club Gol FC',
+        theme_color: '#0b1f16',
+        background_color: '#0b1f16',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
@@ -34,7 +40,17 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        // js/css/html/svg/ico sí; los PNG son solo iconos de manifest/install
+        // y se piden a la red en el momento de instalar (y globIgnores de abajo
+        // los deja afuera aunque alguien vuelva a agregar 'png' al patrón).
+        globPatterns: ['**/*.{js,css,html,svg,ico}'],
+        globIgnores: ['**/icon-512*.png', '**/apple-touch-icon.png'],
+        // Modo prompt: el SW nuevo NO se salta la fase de espera solo; espera
+        // el SKIP_WAITING que manda main.tsx cuando el usuario acepta recargar.
+        skipWaiting: false,
+        // Al activarse, el SW nuevo toma el control de la pestaña abierta
+        // (controllerchange) y workbox-window dispara la recarga automática.
+        clientsClaim: true,
         runtimeCaching: [
           {
             // Fotos de jugadores subidas al backend. CacheFirst porque las URLs
@@ -63,6 +79,31 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
+          {
+            // Hoja de CSS de Google Fonts (Bebas Neue / Permanent Marker):
+            // StaleWhileRevalidate la sirve del cache sin bloquear el render y
+            // la refresca cuando hay red. Ojo: un string como urlPattern
+            // workbox lo toma como match EXACTO, por eso va con función.
+            urlPattern: ({ url }) => url.hostname === 'fonts.googleapis.com',
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'google-fonts-stylesheets',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Los .woff2 de fonts.gstatic.com tienen hash en la URL y son
+            // inmutables → CacheFirst con expiración larga: sin esto, al abrir
+            // la app offline se caen las tipografías.
+            urlPattern: ({ url }) => url.hostname === 'fonts.gstatic.com',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-files',
+              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
       devOptions: {
@@ -85,6 +126,36 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            // Socket.IO completo (cliente + stack de transporte). Van juntos
+            // porque socket.io-client importa engine.io-client y sus helpers;
+            // si se repartieran entre chunks se forma un ciclo index ⇄ chunk.
+            if (
+              id.includes('socket.io-client') ||
+              id.includes('engine.io-client') ||
+              id.includes('engine.io-parser') ||
+              id.includes('socket.io-parser') ||
+              id.includes('@socket.io/component-emitter') ||
+              id.includes('xmlhttprequest-ssl') ||
+              id.includes('node_modules/debug/') ||
+              id.includes('node_modules/ms/') || // dependencia de debug
+              id.includes('node_modules/ws/')
+            ) {
+              return 'socket'
+            }
+            // @atlaskit/pragmatic-drag-and-drop + sus helpers de runtime,
+            // por el mismo motivo (si @babel/runtime quedara en el chunk
+            // principal se crearía un ciclo).
+            if (
+              id.includes('pragmatic-drag-and-drop') ||
+              id.includes('bind-event-listener') ||
+              id.includes('raf-schd') ||
+              id.includes('@babel/runtime')
+            ) {
+              return 'atlaskit'
+            }
+            // gsap + @gsap/react (este último vive en node_modules/@gsap/react,
+            // comparte nombre; su único dependiente es react → react-vendor).
+            if (id.includes('gsap')) return 'gsap'
             if (id.includes('react-router')) return 'router'
             if (id.includes('@tanstack/react-query')) return 'query'
             if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) {

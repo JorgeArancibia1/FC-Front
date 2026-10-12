@@ -1,9 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { api } from './api'
+import { authStore } from './auth-store'
+import { getApiErrorMessage } from './errors'
+import type { CurrentUser } from '@/types/auth'
 import type {
   CreateMatchInput,
   MatchDetail,
   MatchListItem,
+  MatchStatus,
   UpdateMatchInput,
 } from '@/types/match'
 
@@ -17,6 +22,17 @@ export function useMatches() {
     queryKey: QK.all,
     queryFn: async () => {
       const { data } = await api.get<MatchListItem[]>('/matches')
+      return data
+    },
+  })
+}
+
+// Partidos en los que el usuario autenticado está inscrito.
+export function useMyMatches() {
+  return useQuery({
+    queryKey: ['matches', 'mine'],
+    queryFn: async () => {
+      const { data } = await api.get<MatchListItem[]>('/matches/mine')
       return data
     },
   })
@@ -75,8 +91,8 @@ export function useUpdateMatch(id: string) {
       return data
     },
     onSuccess: () => {
+      // QK.all es prefijo de QK.detail(id): una sola invalidación alcanza.
       qc.invalidateQueries({ queryKey: QK.all })
-      qc.invalidateQueries({ queryKey: QK.detail(id) })
     },
   })
 }
@@ -94,6 +110,106 @@ export function useDeleteMatch() {
   })
 }
 
+// Cambia solo el estado de un partido desde el listado (Admin/Supervisor).
+export function useSetMatchStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: MatchStatus }) => {
+      const { data } = await api.patch<MatchDetail>(`/matches/${id}`, { status })
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.all })
+    },
+  })
+}
+
+// --- Inscripción optimista --------------------------------------------------
+// Mientras el server confirma, la plantilla y los contadores reaccionan al
+// instante; si falla se revierte el snapshot y en onSettled se refresca todo.
+
+// Devuelve `match` con el usuario agregado (registering) o quitado de la plantilla.
+function withRegistration(match: MatchDetail, user: CurrentUser, registering: boolean): MatchDetail {
+  const registrations = match.registrations.filter((r) => r.userId !== user.id)
+  if (registering) {
+    registrations.push({
+      // Id sintético: lo reemplaza el refetch de onSettled con el real.
+      id: `optimistic-${user.id}`,
+      matchId: match.id,
+      userId: user.id,
+      registeredAt: new Date().toISOString(),
+      user: { id: user.id, name: user.name },
+    })
+  }
+  return { ...match, registrations }
+}
+
+// Ajusta el contador de inscripciones del listado de partidos (['matches']).
+function withRegistrationCount(
+  list: MatchListItem[],
+  matchId: string,
+  delta: number,
+): MatchListItem[] {
+  return list.map((m) =>
+    m.id === matchId
+      ? { ...m, _count: { ...m._count, registrations: Math.max(0, m._count.registrations + delta) } }
+      : m,
+  )
+}
+
+// Snapshot de las queries que ven la inscripción: detalle, active y listado.
+// QK.all es prefijo de las tres → cancelarlas con esa clave alcanza.
+async function snapshotEnrollQueries(qc: QueryClient, matchId: string) {
+  await qc.cancelQueries({ queryKey: QK.all })
+  return {
+    prevDetail: qc.getQueryData<MatchDetail>(QK.detail(matchId)),
+    prevActive: qc.getQueryData<MatchDetail | null>(['matches', 'active']),
+    prevList: qc.getQueryData<MatchListItem[]>(QK.all),
+  }
+}
+
+// Aplica el cambio optimista a las tres queries (detalle, active y listado).
+function applyEnrollOptimistic(
+  qc: QueryClient,
+  matchId: string,
+  snapshot: {
+    prevDetail: MatchDetail | undefined
+    prevActive: MatchDetail | null | undefined
+    prevList: MatchListItem[] | undefined
+  },
+  registering: boolean,
+) {
+  const user = authStore.getUser()
+  if (!user) return // Sin usuario no hay nada que inscribir de forma optimista.
+  if (snapshot.prevDetail) {
+    qc.setQueryData(QK.detail(matchId), withRegistration(snapshot.prevDetail, user, registering))
+  }
+  if (snapshot.prevActive && snapshot.prevActive.id === matchId) {
+    qc.setQueryData(['matches', 'active'], withRegistration(snapshot.prevActive, user, registering))
+  }
+  if (snapshot.prevList) {
+    qc.setQueryData(QK.all, withRegistrationCount(snapshot.prevList, matchId, registering ? 1 : -1))
+  }
+}
+
+// Rollback: restaura los tres snapshots guardados en onMutate.
+function rollbackEnroll(
+  qc: QueryClient,
+  matchId: string,
+  snapshot:
+    | {
+        prevDetail: MatchDetail | undefined
+        prevActive: MatchDetail | null | undefined
+        prevList: MatchListItem[] | undefined
+      }
+    | undefined,
+) {
+  if (!snapshot) return
+  if (snapshot.prevDetail) qc.setQueryData(QK.detail(matchId), snapshot.prevDetail)
+  if (snapshot.prevActive) qc.setQueryData(['matches', 'active'], snapshot.prevActive)
+  if (snapshot.prevList) qc.setQueryData(QK.all, snapshot.prevList)
+}
+
 export function useRegisterToMatch(matchId: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -101,8 +217,14 @@ export function useRegisterToMatch(matchId: string) {
       const { data } = await api.post(`/matches/${matchId}/register`)
       return data
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.detail(matchId) })
+    onMutate: async () => {
+      const snapshot = await snapshotEnrollQueries(qc, matchId)
+      applyEnrollOptimistic(qc, matchId, snapshot, true)
+      return snapshot
+    },
+    onError: (_err, _vars, ctx) => rollbackEnroll(qc, matchId, ctx),
+    onSettled: () => {
+      // QK.all cubre detalle, active y listado.
       qc.invalidateQueries({ queryKey: QK.all })
     },
   })
@@ -114,8 +236,14 @@ export function useUnregisterFromMatch(matchId: string) {
     mutationFn: async () => {
       await api.delete(`/matches/${matchId}/register`)
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QK.detail(matchId) })
+    onMutate: async () => {
+      const snapshot = await snapshotEnrollQueries(qc, matchId)
+      applyEnrollOptimistic(qc, matchId, snapshot, false)
+      return snapshot
+    },
+    onError: (_err, _vars, ctx) => rollbackEnroll(qc, matchId, ctx),
+    onSettled: () => {
+      // QK.all cubre detalle, active y listado.
       qc.invalidateQueries({ queryKey: QK.all })
     },
   })
@@ -151,13 +279,45 @@ export function useReorderRegistrations(matchId: string) {
       if (prevActive) qc.setQueryData(['matches', 'active'], apply(prevActive))
       return { prevDetail, prevActive }
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (err, _vars, ctx) => {
       if (ctx?.prevDetail) qc.setQueryData(QK.detail(matchId), ctx.prevDetail)
       if (ctx?.prevActive) qc.setQueryData(['matches', 'active'], ctx.prevActive)
+      // El rollback deja el board como estaba; avisamos para que el admin sepa.
+      toast.error(getApiErrorMessage(err))
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: QK.detail(matchId) })
       qc.invalidateQueries({ queryKey: ['matches', 'active'] })
+    },
+  })
+}
+
+// --- Gestión de jugadores por el admin --------------------------------------
+
+// Inscribe a otro usuario (Admin/Developer). También permite partidos cerrados.
+export function useAdminAddPlayer(matchId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { data } = await api.post(`/matches/${matchId}/players`, { userId })
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches'] })
+    },
+  })
+}
+
+// Quita a otro usuario del partido (Admin/Developer).
+export function useAdminRemovePlayer(matchId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      await api.delete(`/matches/${matchId}/players/${userId}`)
+      return userId
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['matches'] })
     },
   })
 }
