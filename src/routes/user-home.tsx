@@ -53,7 +53,7 @@ export default function UserHome() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in-down">
         <div>
           <h1 className="text-2xl font-black tracking-tight sm:text-3xl">¡Hola, {firstName}!</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export default function UserHome() {
 
       {/* Próximo partido — tablero de estadio */}
       {nextMatch && (
-        <section className="relative overflow-hidden rounded-2xl bg-pitch-vignette text-white shadow-lg ring-1 ring-black/20">
+        <section className="relative overflow-hidden rounded-2xl bg-pitch-vignette text-white shadow-lg ring-1 ring-black/20 animate-scale-in hover-lift">
           <div className="pointer-events-none absolute inset-0 bg-pitch-lines opacity-60" aria-hidden />
           <div className="pointer-events-none absolute inset-0 bg-grass-stripes opacity-40" aria-hidden />
           <div className="pointer-events-none absolute inset-0 bg-stadium-beams" aria-hidden />
@@ -194,14 +194,15 @@ export default function UserHome() {
         )}
         {myMatches.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2">
-            {myMatches.map((m) => (
-              <MatchListCard
-                key={m.id}
-                match={m}
-                to={`/partidos/${m.id}`}
-                enrolled
-                onInvite={() => openInvite(m)}
-              />
+            {myMatches.map((m, i) => (
+              <div key={m.id} className="stagger-item" style={{ animationDelay: `${i * 100}ms` }}>
+                <MatchListCard
+                  match={m}
+                  to={`/partidos/${m.id}`}
+                  enrolled
+                  onInvite={() => openInvite(m)}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -233,8 +234,10 @@ export default function UserHome() {
         )}
         {openMatches.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2">
-            {openMatches.map((m) => (
-              <MatchListCard key={m.id} match={m} to={`/partidos/${m.id}`} />
+            {openMatches.map((m, i) => (
+              <div key={m.id} className="stagger-item" style={{ animationDelay: `${i * 100}ms` }}>
+                <MatchListCard match={m} to={`/partidos/${m.id}`} />
+              </div>
             ))}
           </div>
         )}

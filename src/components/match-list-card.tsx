@@ -26,8 +26,8 @@ export function MatchListCard({ match, to, onInvite, enrolled }: Props) {
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md',
-        enrolled ? 'border-team-a/40 hover:border-team-a/60' : 'border-border/70 hover:border-primary/30',
+        'group relative overflow-hidden transition-smooth hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10',
+        enrolled ? 'border-team-a/40 hover:border-team-a/60 hover-glow' : 'border-border/70 hover:border-primary/30',
       )}
     >
       {/* Franja lateral: césped normal, degradado A→B si ya estás inscrito */}
@@ -43,9 +43,9 @@ export function MatchListCard({ match, to, onInvite, enrolled }: Props) {
           <div className="min-w-0">
             <Link
               to={to}
-              className="flex items-center gap-1.5 text-base font-bold hover:text-primary"
+              className="flex items-center gap-1.5 text-base font-bold hover:text-primary transition-smooth"
             >
-              <Goal className="size-4 shrink-0 text-primary" />
+              <Goal className="size-4 shrink-0 text-primary transition-smooth group-hover:scale-110 group-hover:rotate-6" />
               <span className="truncate">{match.place}</span>
             </Link>
             <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -85,12 +85,12 @@ export function MatchListCard({ match, to, onInvite, enrolled }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant={enrolled ? 'default' : 'outline'} className="flex-1">
+          <Button asChild size="sm" variant={enrolled ? 'default' : 'outline'} className="flex-1 transition-smooth hover:scale-[1.02]">
             <Link to={to}>{enrolled ? 'Ver mi partido' : 'Ver detalle'}</Link>
           </Button>
           {onInvite && (
-            <Button size="sm" variant="outline" onClick={onInvite}>
-              <Ticket /> Invitar
+            <Button size="sm" variant="outline" onClick={onInvite} className="transition-smooth hover:scale-[1.02]">
+              <Ticket className="transition-smooth group-hover:rotate-12" /> Invitar
             </Button>
           )}
         </div>

@@ -110,7 +110,7 @@ export function AdminShell() {
       {/* Sidebar fija (desktop) */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border/70 bg-card transition-[width] duration-300 lg:flex',
+          'fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-border/70 bg-card transition-[width] duration-300 lg:flex animate-slide-in-left',
           collapsed ? 'w-20' : 'w-72',
         )}
       >
@@ -208,7 +208,7 @@ export function AdminShell() {
           <span className="block h-0.5 grass-underline" aria-hidden />
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 py-6 md:py-8">
+        <main className="mx-auto max-w-6xl px-4 py-6 md:py-8 animate-fade-in-up">
           <Outlet />
         </main>
       </div>
@@ -263,7 +263,7 @@ function NavList({
           title={collapsed ? label : undefined}
           className={({ isActive }) =>
             cn(
-              'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors',
+              'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-smooth',
               collapsed && 'justify-center px-0',
               isActive
                 ? 'bg-primary/10 text-primary'
@@ -271,7 +271,7 @@ function NavList({
             )
           }
         >
-          <Icon className="size-[18px] shrink-0" />
+          <Icon className="size-[18px] shrink-0 transition-smooth group-hover:scale-110" />
           {!collapsed && <span className="truncate">{label}</span>}
         </NavLink>
       ))}

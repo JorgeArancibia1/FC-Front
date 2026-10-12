@@ -54,9 +54,9 @@ export function AuthLayout({ title, subtitle, children, footer, backTo, backLabe
       />
 
       <div className="relative w-full max-w-md">
-        <div className="mb-6 flex flex-col items-center gap-4 text-center">
-          <Link to="/login" className="flex flex-col items-center gap-3">
-            <span className="relative flex size-20 items-center justify-center overflow-hidden rounded-3xl bg-white/10 shadow-2xl shadow-black/40 ring-1 ring-white/20 backdrop-blur-xl">
+        <div className="mb-6 flex flex-col items-center gap-4 text-center animate-fade-in-down">
+          <Link to="/login" className="flex flex-col items-center gap-3 group">
+            <span className="relative flex size-20 items-center justify-center overflow-hidden rounded-3xl bg-white/10 shadow-2xl shadow-black/40 ring-1 ring-white/20 backdrop-blur-xl transition-smooth group-hover:scale-105 group-hover:shadow-team-a/20">
               <img src="/icon-512.png" alt="Gol FC" className="relative size-16 object-contain" />
               <span className="absolute inset-x-0 bottom-0 h-0.5 grass-underline" aria-hidden />
             </span>
@@ -71,7 +71,7 @@ export function AuthLayout({ title, subtitle, children, footer, backTo, backLabe
           </Link>
         </div>
 
-        <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-6 shadow-2xl shadow-black/50 backdrop-blur-xl sm:p-8">
+        <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/[0.07] p-6 shadow-2xl shadow-black/50 backdrop-blur-xl sm:p-8 animate-scale-in">
           <span className="absolute inset-x-0 top-0 h-1 grass-underline" aria-hidden />
           <span
             className="pointer-events-none absolute -top-16 right-0 size-40 rounded-full bg-team-a/10 blur-3xl"

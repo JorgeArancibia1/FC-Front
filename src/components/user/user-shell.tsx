@@ -48,10 +48,10 @@ export function UserShell() {
 
   return (
     <div className="min-h-svh bg-matchday pb-20 lg:pb-0">
-      <header className="sticky top-0 z-20 border-b border-border/70 bg-card/85 backdrop-blur-md pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-20 border-b border-border/70 bg-card/85 backdrop-blur-md pt-[env(safe-area-inset-top)] animate-fade-in-down">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <Link to="/inicio" className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center overflow-hidden rounded-xl bg-primary/10 ring-2 ring-primary/25">
+          <Link to="/inicio" className="flex items-center gap-2.5 group">
+            <span className="flex size-9 items-center justify-center overflow-hidden rounded-xl bg-primary/10 ring-2 ring-primary/25 transition-smooth group-hover:ring-primary/50 group-hover:scale-105">
               <img src="/icon-192.png" alt="" className="size-8 object-contain" />
             </span>
             <span className="flex flex-col leading-none">
@@ -70,7 +70,7 @@ export function UserShell() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+                    'rounded-lg px-3 py-2 text-sm font-semibold transition-smooth relative',
                     isActive
                       ? 'bg-primary/10 text-primary'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -113,12 +113,12 @@ export function UserShell() {
         <span className="block h-0.5 grass-underline" aria-hidden />
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6 md:py-8">
+      <main className="mx-auto max-w-5xl px-4 py-6 md:py-8 animate-fade-in-up">
         <Outlet />
       </main>
 
       {/* Navegación inferior (móvil) */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-card/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border/70 bg-card/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] lg:hidden animate-fade-in-up">
         <div className="mx-auto flex max-w-5xl items-stretch">
           {items.map(({ to, label, icon: Icon, end }) => {
             const active = end ? pathname === to : pathname.startsWith(to)
@@ -127,11 +127,11 @@ export function UserShell() {
                 key={to}
                 to={to}
                 className={cn(
-                  'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors',
+                  'flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-smooth',
                   active ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
-                <Icon className="size-5" />
+                <Icon className="size-5 transition-smooth" />
                 {label}
               </Link>
             )
