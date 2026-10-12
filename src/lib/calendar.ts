@@ -6,11 +6,11 @@ const DEFAULT_DURATION_MS = 2 * 60 * 60 * 1000
 export type CalendarMatch = Pick<Match, 'id' | 'place' | 'dateTime' | 'notes'>
 
 function eventTitle(match: CalendarMatch): string {
-  return `⚽ ${match.place} · Árbol de Vida FC`
+  return `⚽ ${match.place} · Gol FC`
 }
 
 function eventDescription(match: CalendarMatch): string {
-  return match.notes?.trim() || 'Partido de fútbol en Árbol de Vida FC.'
+  return match.notes?.trim() || 'Partido de fútbol en Gol FC.'
 }
 
 /** ISO → formato básico UTC de iCalendar: 'YYYYMMDDTHHMMSSZ'. */
@@ -47,11 +47,11 @@ export function buildIcs(match: CalendarMatch): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Arbol de Vida FC//Partidos//ES',
+    'PRODID:-//Gol FC//Partidos//ES',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:${match.id}@arboldevida.fc`,
+    `UID:${match.id}@golfc.club`,
     `DTSTAMP:${toBasicUtc(new Date().toISOString())}`,
     `DTSTART:${toBasicUtc(match.dateTime)}`,
     `DTEND:${toBasicUtc(endIso(match))}`,
@@ -79,7 +79,7 @@ export function downloadMatchIcs(match: CalendarMatch): void {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = `partido-${slugify(match.place) || 'arbol-de-vida'}.ics`
+  anchor.download = `partido-${slugify(match.place) || 'gol-fc'}.ics`
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()

@@ -4,7 +4,7 @@ import { Check, Circle, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-const DISMISS_KEY = 'advfc-onboarding-dismissed'
+const DISMISS_KEY = 'golfc-onboarding-dismissed'
 
 interface Step {
   label: string

@@ -21,7 +21,7 @@ export function PlatformInviteDialog({ create, onClose }: Props) {
 
   const whatsappUrl = invite
     ? `https://wa.me/?text=${encodeURIComponent(
-        `⚽ Únete a Árbol de Vida FC. Crea tu cuenta con este link: ${invite.url} · Código: ${invite.code}`,
+        `⚽ Únete a Gol FC. Crea tu cuenta con este link: ${invite.url} · Código: ${invite.code}`,
       )}`
     : '#'
 
@@ -130,8 +130,8 @@ export function PlatformInviteDialog({ create, onClose }: Props) {
                   onClick={async () => {
                     try {
                       await navigator.share({
-                        title: 'Únete a Árbol de Vida FC',
-                        text: `Crea tu cuenta en Árbol de Vida FC. Código: ${invite.code}`,
+                        title: 'Únete a Gol FC',
+                        text: `Crea tu cuenta en Gol FC. Código: ${invite.code}`,
                         url: invite.url,
                       })
                     } catch {

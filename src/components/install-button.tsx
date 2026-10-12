@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 // Persistimos el descarte del botón: si solo viviera en estado, al recargar
 // (o al abrir otra pestaña) volvería a aparecer aunque el usuario ya lo
 // haya cerrado.
-const DISMISS_KEY = 'advfc.installDismissed'
+const DISMISS_KEY = 'golfc.installDismissed'
 
 function readDismissed(): boolean {
   try {

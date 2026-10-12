@@ -1,11 +1,12 @@
 {
-  "name": "arbol-de-vida-fc",
+  "name": "golfc-front",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "icons": "node scripts/generate-pwa-icons.mjs",
+    "icons:favicon": "node scripts/generate-favicon.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 
 export type Theme = 'light' | 'dark' | 'system'
 
-const STORAGE_KEY = 'advfc-theme'
+const STORAGE_KEY = 'golfc-theme'
 const media =
   typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null
 

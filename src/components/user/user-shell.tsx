@@ -55,7 +55,7 @@ export function UserShell() {
               <img src="/icon-192.png" alt="" className="size-8 object-contain" />
             </span>
             <span className="flex flex-col leading-none">
-              <span className="text-sm font-black leading-tight">Árbol de Vida FC</span>
+              <span className="text-sm font-black leading-tight">Gol FC</span>
               <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary/80">
                 Fútbol club
               </span>

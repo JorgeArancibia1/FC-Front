@@ -1,8 +1,8 @@
 import type { CurrentUser } from '@/types/auth'
 
-const TOKEN_KEY = 'advfc.token'
-const REFRESH_KEY = 'advfc.refreshToken'
-const USER_KEY = 'advfc.user'
+const TOKEN_KEY = 'golfc.token'
+const REFRESH_KEY = 'golfc.refreshToken'
+const USER_KEY = 'golfc.user'
 
 type Listener = () => void
 const listeners = new Set<Listener>()

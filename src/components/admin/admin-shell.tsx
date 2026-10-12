@@ -42,7 +42,7 @@ const NAV: NavItem[] = [
 
 const SYSTEM_ITEM: NavItem = { to: '/admin/sistema', label: 'Sistema', icon: Cog, end: false }
 
-const COLLAPSE_KEY = 'advfc.sidebarCollapsed'
+const COLLAPSE_KEY = 'golfc.sidebarCollapsed'
 
 function sectionTitle(pathname: string): string {
   if (pathname.startsWith('/admin/partidos')) return 'Partidos'
@@ -231,7 +231,7 @@ function SidebarBrand({ collapsed, onClick }: { collapsed?: boolean; onClick?: (
       </span>
       {!collapsed && (
         <div className="min-w-0">
-          <p className="truncate text-sm font-black leading-tight">Árbol de Vida FC</p>
+          <p className="truncate text-sm font-black leading-tight">Gol FC</p>
           <p className="text-[11px] font-medium text-primary">Panel del club</p>
         </div>
       )}

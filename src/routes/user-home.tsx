@@ -57,7 +57,7 @@ export default function UserHome() {
         <div>
           <h1 className="text-2xl font-black tracking-tight sm:text-3xl">¡Hola, {firstName}!</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Este es tu resumen de partidos en Árbol de Vida FC.
+            Este es tu resumen de partidos en Gol FC.
           </p>
         </div>
         {admin && (

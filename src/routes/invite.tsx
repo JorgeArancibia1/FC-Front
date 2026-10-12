@@ -32,7 +32,7 @@ export default function InvitePage() {
   return (
     <AuthLayout
       title="Invitación a un partido"
-      subtitle="Te han invitado a jugar en Árbol de Vida FC"
+      subtitle="Te han invitado a jugar en Gol FC"
       footer={
         <>
           ¿No tienes cuenta?{' '}

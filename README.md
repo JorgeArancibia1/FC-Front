@@ -128,7 +128,7 @@ Después de subir:
 ```bash
 npm i -g netlify-cli
 netlify login
-cd arbol-de-vida-fc
+cd simonfc-front
 netlify init                              # crea el sitio (o lo conecta a uno existente)
 netlify env:set VITE_API_URL https://tu-backend.com/api
 netlify deploy --build --prod             # build + deploy a producción
@@ -151,7 +151,7 @@ netlify deploy --build                    # crea una URL temporal de preview
 
 Abre tu URL `*.netlify.app` y revisa:
 - ✅ `/login` carga (no 404 al refrescar con F5)
-- ✅ DevTools → Application → Manifest → muestra "Árbol de Vida FC"
+- ✅ DevTools → Application → Manifest → muestra "Simón FC"
 - ✅ DevTools → Application → Service Workers → `sw.js` activo
 - ✅ DevTools → Network → `sw.js` con `Cache-Control: max-age=0`
 - ✅ DevTools → Network → `assets/*-<hash>.js` con `max-age=31536000`

@@ -44,7 +44,7 @@ if (!isSvg) {
 }
 
 // Color de fondo del manifest (debe matchear background_color del vite.config.ts).
-const BACKGROUND = { r: 15, g: 23, b: 42, alpha: 1 } // #0f172a
+const BACKGROUND = { r: 11, g: 31, b: 22, alpha: 1 } // #0b1f16
 
 /** Pipeline base: SVG se rasteriza con density alto, raster se lee tal cual. */
 const base = () =>

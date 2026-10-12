@@ -44,7 +44,7 @@ export function InviteFriendsDialog({ matchId, matchPlace, create, onClose }: Pr
 
   const whatsappUrl = invite
     ? `https://wa.me/?text=${encodeURIComponent(
-        `⚽ Te invito a jugar: ${matchPlace} (Árbol de Vida FC). Únete con este link: ${invite.url} · Código: ${invite.code}`,
+        `⚽ Te invito a jugar: ${matchPlace} (Gol FC). Únete con este link: ${invite.url} · Código: ${invite.code}`,
       )}`
     : '#'
 
@@ -172,7 +172,7 @@ export function InviteFriendsDialog({ matchId, matchPlace, create, onClose }: Pr
                     try {
                       await navigator.share({
                         title: 'Te invitan a un partido',
-                        text: `Únete a ${matchPlace} en Árbol de Vida FC. Código: ${invite.code}`,
+                        text: `Únete a ${matchPlace} en Gol FC. Código: ${invite.code}`,
                         url: invite.url,
                       })
                     } catch {

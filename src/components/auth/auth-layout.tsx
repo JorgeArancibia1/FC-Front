@@ -57,12 +57,12 @@ export function AuthLayout({ title, subtitle, children, footer, backTo, backLabe
         <div className="mb-6 flex flex-col items-center gap-4 text-center">
           <Link to="/login" className="flex flex-col items-center gap-3">
             <span className="relative flex size-20 items-center justify-center overflow-hidden rounded-3xl bg-white/10 shadow-2xl shadow-black/40 ring-1 ring-white/20 backdrop-blur-xl">
-              <img src="/icon-512.png" alt="Árbol de Vida FC" className="relative size-16 object-contain" />
+              <img src="/icon-512.png" alt="Gol FC" className="relative size-16 object-contain" />
               <span className="absolute inset-x-0 bottom-0 h-0.5 grass-underline" aria-hidden />
             </span>
             <span className="flex flex-col items-center">
               <span className="font-display text-2xl uppercase leading-none tracking-[0.06em] text-white text-shadow-hero">
-                Árbol de Vida FC
+                Gol FC
               </span>
               <span className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.32em] text-team-a">
                 <ShieldCheck className="size-3.5" /> Fútbol club

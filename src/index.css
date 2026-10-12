@@ -55,6 +55,8 @@
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
   --animate-float: float 6s ease-in-out infinite;
   --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
+  --animate-spin-slow: spin 8s linear infinite;
+  --animate-bounce-slow: bounce-slow 2s ease-in-out infinite;
 }
 
 /* ---------------------------------------------------------------- Light --- */
@@ -355,6 +357,16 @@
   }
   100% {
     opacity: 0;
+  }
+}
+
+@keyframes bounce-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
   }
 }
 
