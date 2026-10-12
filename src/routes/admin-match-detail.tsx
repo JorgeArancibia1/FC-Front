@@ -193,9 +193,9 @@ export default function AdminMatchDetail() {
           {/* Gestión de jugadores (Admin/Developer) */}
           {admin && <AdminMatchPlayers match={data} />}
 
-          {/* Plantilla compartida: mismo diseño que ve el jugador, y el admin
+          {/* Plantilla compartida: mismo diseño que ve el jugador, y cualquiera
               puede arrastrar para reordenar equipos. */}
-          <MatchPlantilla match={data} currentUserId={currentUser?.id} canReorder={admin} />
+          <MatchPlantilla match={data} currentUserId={currentUser?.id} canReorder />
 
           {/* Zona peligrosa (solo Admin/Developer) */}
           {admin && (

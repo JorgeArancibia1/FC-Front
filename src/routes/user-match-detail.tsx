@@ -14,7 +14,7 @@ import { useMatchRealtime } from '@/hooks/use-match-realtime'
 import { useCreateInvite } from '@/lib/api-invites'
 import { useMatch } from '@/lib/api-matches'
 import { formatMatchDate } from '@/lib/format'
-import { isAdmin, isManager } from '@/lib/roles'
+import { isAdmin } from '@/lib/roles'
 
 export default function UserMatchDetail() {
   const { id } = useParams<{ id: string }>()
@@ -28,7 +28,8 @@ export default function UserMatchDetail() {
 
   const enrolled = !!data?.registrations.some((r) => r.userId === user?.id)
   const canInvite = enrolled || isAdmin(user)
-  const canReorder = isManager(user)
+  // Dev, admin y jugador pueden arrastrar las tarjetas para reordenar equipos.
+  const canReorder = true
 
   // Abrir el diálogo es el evento que genera la invitación (no un useEffect
   // dentro del diálogo: con StrictMode el status de la mutación se queda en

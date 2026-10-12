@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 interface Props {
   match: MatchDetail
   currentUserId?: string
+  /** Dev, admin y jugador pueden arrastrar para reordenar los equipos. */
   canReorder?: boolean
   /** Modo inmersivo: cancha de borde a borde y a todo el alto del viewport. */
   fullScreen?: boolean

@@ -219,7 +219,7 @@ export default function PartidoActivo() {
           </Card>
         )}
 
-        {match && <MatchHeroBoard match={match} currentUserId={user?.id} canReorder={manager} />}
+        {match && <MatchHeroBoard match={match} currentUserId={user?.id} canReorder />}
       </main>
     </div>
   )

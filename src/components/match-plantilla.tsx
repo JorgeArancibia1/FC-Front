@@ -5,8 +5,8 @@ interface Props {
   match: MatchDetail
   currentUserId?: string
   /**
-   * Habilita el arrastrar/soltar para reordenar equipos. El admin lo activa;
-   * el jugador ve exactamente el mismo tablero pero de solo lectura.
+   * Habilita el arrastrar/soltar para reordenar equipos. Dev, admin y jugador
+   * pueden reordenar; se deja como flag por si se quiere volver a restringir.
    */
   canReorder?: boolean
   /**
@@ -19,8 +19,8 @@ interface Props {
 
 /**
  * Plantilla compartida del partido (tarjetas verdes/azules + foto de cuerpo
- * entero). Es el mismo diseño para Admin y Jugador; sólo cambia si puede
- * arrastrar tarjetas. Va sobre fondo de cancha para verse igual en claro/oscuro.
+ * entero). Es el mismo diseño para Admin y Jugador, y ambos pueden arrastrar
+ * tarjetas. Va sobre fondo de cancha para verse igual en claro/oscuro.
  */
 export function MatchPlantilla({ match, currentUserId, canReorder, fullScreen }: Props) {
   return (
