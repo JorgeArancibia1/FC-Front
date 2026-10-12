@@ -123,16 +123,7 @@ Después de subir:
 - Site settings → Build & deploy → Environment → Environment variables → agregar `VITE_API_URL`
 - Deploys → Trigger deploy → Deploy site (para que el build use la variable)
 
-### Opción B — Netlify CLI (recomendado para iterar)
 
-```bash
-npm i -g netlify-cli
-netlify login
-cd simonfc-front
-netlify init                              # crea el sitio (o lo conecta a uno existente)
-netlify env:set VITE_API_URL https://tu-backend.com/api
-netlify deploy --build --prod             # build + deploy a producción
-```
 
 Para previews:
 ```bash
